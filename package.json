@@ -1,0 +1,41 @@
+{
+    "name": "zscript",
+    "displayName": "Zodiac Script",
+    "description": "Zodiac Script language support",
+    "version": "1.0.0",
+    "engines": { "vscode": "^1.80.0" },
+    "categories": [ "Programming Languages" ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "zscript",
+                "aliases": [
+                    "zScript",
+                    "zscript"
+                ],
+                "extensions": [ ".zs", ".zi" ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "zscript",
+                "scopeName": "source.zs",
+                "path": "./syntaxes/zscript.tmLanguage.json"
+            }
+        ]
+    },
+    "scripts": {
+        "//vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "npm run compile && node ./node_modules/vscode/bin/test",
+        "//package": "npm i && npm run compile && vsce package",
+        "package": "vsce package"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:osesov/zs.git"
+    }
+}

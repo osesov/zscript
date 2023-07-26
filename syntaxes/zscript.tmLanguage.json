@@ -1,0 +1,98 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "zScript",
+	"patterns": [
+		{ "include": "#keywords" },
+		{ "include": "#strings" },
+		{ "include": "#lineComment" },
+		{ "include": "#blockComment" },
+		{ "include": "#prerocess" },
+		{ "include": "#types" },
+		{ "include": "#modifiers" },
+		{ "include": "#ident" },
+		{ "include": "#operators" },
+		{ "include": "#numbers" }
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.zs",
+				"match": "\\b(if|else|switch|case|default|do|while|for|return|enum|interface|class|break|continue)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.zs",
+			"begin": "[\"']",
+			"end": "[\"']",
+			"patterns": [
+				{
+					"name": "constant.character.escape.zs",
+					"match": "\\\\."
+				}
+			]
+		},
+		"lineComment": {
+			"name": "comment.line.double-dash.zs",
+			"match": "//.*$"
+		},
+		"blockComment": {
+			"name": "comment.block.zs",
+			"begin": "/\\*",
+			"end": "\\*/",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.comment.begin.zs"
+				}
+			},
+			"endCaptures": {
+				"0": {
+					"name": "punctuation.definition.comment.end.zs"
+				}
+			}
+		},
+		"prerocess": {
+			"match": "^\\s*#\\s*(define|if|ifdef|ifndef|elif|else|endif|include)\\b(.*)?$",
+			"captures": {
+				"1": { "name": "keyword.control.directive.conditional.zs" },
+				"2": { "name": "variable.zs" }
+			}
+		},
+		"ident": {
+			"name": "entity.name.zs",
+			"match": "[a-zA-Z_][a-zA-Z0-9_]"
+		},
+		"types": {
+			"name": "entity.name.type.zs",
+			"match": "\\b(int|str|long|bool|float|double|void)\\b"
+		},
+		"modifiers": {
+			"name": "keyword.other.zs",
+			"match": "\\b(public|private|protected)\\b"
+		},
+		"operators": {
+			"name": "keyword.operator.zs",
+			"match": "<<|>>|\\|\\||&&|==|!=|<=|>=|[-+*/%<>=!^&|!?:]"
+		},
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric",
+					"match": "[0-9]+([.][0-9]*)[uidf]?"
+				},
+				{
+					"name": "constant.numeric",
+					"match": "[0-9]+([.][0-9]*)[uidf]?"
+				},
+				{
+					"name": "constant.numeric",
+					"match": "0x[0-9A-Fa-f]+[uidf]?"
+				},
+				{
+					"name": "constant.numeric",
+					"match": "0x[0-9A-Fa-f]+[uidf]?"
+				}
+			]
+		}
+	},
+	"scopeName": "source.zs"
+}
