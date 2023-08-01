@@ -16,7 +16,6 @@
         "Debuggers"
     ],
     "activationEvents": [
-        "*",
         "onDebug",
         "onCommand:extension.zscript.getProgramName",
         "onLanguage:zscript",
@@ -197,7 +196,9 @@
         "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/zscript.js --external:vscode --format=cjs --platform=node",
         "esbuild": "npm run esbuild-base -- --sourcemap",
         "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
-        "test-compile": "tsc -p ./"
+        "test-compile": "tsc -p ./",
+        "package": "vsce package",
+        "up": "npm run package && code --install-extension ./zscript-${npm_package_version}.vsix"
     },
     "repository": {
         "type": "git",
