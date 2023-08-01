@@ -49,10 +49,8 @@ class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
 			const editor = vscode.window.activeTextEditor;
 			if (editor && editor.document.languageId === 'zscript') {
 				config.type = 'zs';
-				config.name = 'attach';
+				config.name = 'zsDebug: attach';
 				config.request = 'attach';
-				config.program = '${file}';
-				config.connectionType = 'tcp';
 			}
 		}
 

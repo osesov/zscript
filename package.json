@@ -127,14 +127,57 @@
                         }
                     },
                     "attach": {
-                        "required": [
-                            "rootDir"
-                        ],
+                        "required": [],
                         "properties": {
-                            "rootDir": {
+                            "target": {
                                 "type": "string",
-                                "description": "Absolute path to a root dir.",
-                                "default": "${workspaceFolder}/${command:AskForProgramName}"
+                                "description": "Path of executable"
+                            },
+                            "arguments": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Arguments to append after the executable. You can also use pipes."
+                            },
+                            "cwd": {
+                                "type": "string",
+                                "description": "project path"
+                            },
+                            "env": {
+                                "type": "object",
+                                "description": "Environment overriding the gdb (and in turn also the process) environment",
+                                "default": null
+                            },
+                            "pathSubstitutions": {
+                                "type": "object",
+                                "description": "Find your source using path substitutions",
+                                "default": {
+                                    "<fromPath>": "<toPath>"
+                                }
+                            },
+                            "showDevDebugOutput": {
+                                "type": "boolean",
+                                "description": "Prints all debugger interactions to the console",
+                                "default": false
+                            },
+                            "showApplicationOutput": {
+                                "type": "boolean",
+                                "description": "Prints application output to the console",
+                                "default": false
+                            },
+                            "showApplicationLogs": {
+                                "type": "boolean",
+                                "description": "Prints application log (Sent via debug) to the console",
+                                "default": true
+                            },
+                            "stopAtEntry": {
+                                "type": [
+                                    "boolean",
+                                    "string"
+                                ],
+                                "description": "Whether debugger should stop at application entry point",
+                                "default": false
                             },
                             "host": {
                                 "type": "string"
@@ -171,17 +214,26 @@
                             "type": "zs",
                             "request": "launch",
                             "name": "Launch zs process",
-                            "rootDir": "${workspaceFolder}"
+                            "host": "0.0.0.0",
+                            "port": 2009,
+                            "target": "zs-build",
+                            "cwd": "$(workspaceFolder}",
+                            "showApplicationOutput": true,
+                            "showApplicationLogs": false
                         }
                     },
                     {
                         "label": "ZS Debug: Attach",
-                        "description": "A new configuration for attaching a zs program",
+                        "description": "Configuration for attaching a zs emulator",
                         "body": {
                             "type": "zs",
                             "request": "attach",
-                            "name": "attach to zs process",
-                            "rootDir": "${workspaceFolder}"
+                            "name": "Attach zs process",
+                            "host": "0.0.0.0",
+                            "port": 2009,
+                            "cwd": "$(workspaceFolder}",
+                            "showApplicationOutput": false,
+                            "showApplicationLogs": true
                         }
                     }
                 ],
