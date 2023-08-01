@@ -222,22 +222,21 @@ export class ZSDebugSession extends LoggingDebugSession implements Logger
 
     protected dispatchRequest(request: DebugProtocol.Request): void
     {
-        if (filterMessage(request)) {
-            console.log(`zsDebug.Req ${request?.command}, request: ${JSON.stringify(request)}`)
+        if (this.config.showDevDebugOutput && filterMessage(request)) {
             super.sendEvent(new OutputEvent(`zsDebug.REQ ${request?.command}, request: ${JSON.stringify(request)}\n`))
         }
         super.dispatchRequest(request)
     }
 
     public sendRequest(command: string, args: any, timeout: number, cb: (response: DebugProtocol.Response) => void): void {
-        console.log(`zsDebug.SND ${command}, request ${JSON.stringify(args)}`)
-        super.sendEvent( new OutputEvent(`zsDebug.SND ${command}, request ${JSON.stringify(args)}\n`))
+        if (this.config.showDevDebugOutput) {
+            super.sendEvent( new OutputEvent(`zsDebug.SND ${command}, request ${JSON.stringify(args)}\n`))
+        }
         super.sendRequest(command, args, timeout, cb)
     }
 
     public sendResponse(response: DebugProtocol.Response): void {
-        if (filterMessage(response)) {
-            console.log(`zsDebug.Rsp ${response.command}, response: ${JSON.stringify(response)}`)
+        if (this.config.showDevDebugOutput && filterMessage(response)) {
             super.sendEvent(new OutputEvent(`zsDebug.RSP ${response.command}, response: ${JSON.stringify(response)}\n`))
         }
         super.sendResponse(response)
@@ -245,15 +244,15 @@ export class ZSDebugSession extends LoggingDebugSession implements Logger
 
     public sendEvent(event: DebugProtocol.Event): void {
         super.sendEvent(event)
-        if (filterEvent(event)) {
-            console.log(`zsDebug.Evt ${event.event}, event: ${JSON.stringify(event)}`)
+        if (this.config.showDevDebugOutput && filterEvent(event)) {
             super.sendEvent( new OutputEvent(`zsDebug.EVT ${event.event}, event: ${JSON.stringify(event)}\n`))
         }
     }
 
     protected sendErrorResponse(response: DebugProtocol.Response, codeOrMessage: number | DebugProtocol.Message, format?: string | undefined, variables?: any, dest?: ErrorDestination | undefined): void {
-        console.log(`zsDebug.Err ${response}, codeOrMessage: ${JSON.stringify(codeOrMessage)}, format: ${format}, variables: ${JSON.stringify(variables)}, dest: ${dest}`)
-        super.sendEvent(new OutputEvent(`zsDebug.ERR ${response}, codeOrMessage: ${JSON.stringify(codeOrMessage)}, format: ${format}, variables: ${JSON.stringify(variables)}, dest: ${dest}`))
+        if (this.config.showDevDebugOutput) {
+            super.sendEvent(new OutputEvent(`zsDebug.ERR ${response}, codeOrMessage: ${JSON.stringify(codeOrMessage)}, format: ${format}, variables: ${JSON.stringify(variables)}, dest: ${dest}`))
+        }
         super.sendErrorResponse(response, codeOrMessage, format, variables, dest)
     }
 

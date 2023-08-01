@@ -6,4 +6,17 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
-- Initial release
+## [1.0.0]
+
+- Initial release.
+- Features supported:
+  - syntax highlighting: basic implementation
+  - debugger (inline - fully embedded into package, no external processes to run)
+    - breakpoints
+    - step in/step out/step/continue
+    - stack trace
+    - variables inspection
+    - deep variable inspection
+    - Optionally run external app, specifying cwd, args, env
+    - Watch after external app
+    - When app is running, accept debugger commands to bypass to input (in ...)

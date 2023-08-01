@@ -10,8 +10,8 @@ export function addNewLine(str: string): string
     return str + "\n";
 }
 
-export const CommandBody = Symbol();
-export const CommandHelp = Symbol();
+export const CommandBody = Symbol("commandBody");
+export const CommandHelp = Symbol("commandHelp");
 
 export interface CommandTarget
 {
@@ -68,7 +68,7 @@ export function getWord(str: string): [string, string]
     if (quote)
         throw new Error(`Incomplete string in ${str}`)
 
-    return [buffer, str.substring(pos)];
+    return [buffer, str.substring(pos).trimStart()];
 }
 
 export function executeCommand(command: CommandInfo | CommandTarget, str: string): void
@@ -81,7 +81,7 @@ export function executeCommand(command: CommandInfo | CommandTarget, str: string
     const sub = command[name];
 
     if (!sub)
-        throw new Error(`Unknown command at: ${str.trimStart()}`)
+        throw new Error(`Unknown command at: ${str}`)
 
     executeCommand(sub, rest);
 }

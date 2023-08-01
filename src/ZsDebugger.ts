@@ -577,29 +577,31 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         }
 
         const spawnedProcess = child_process.spawn(target, args, options);
-        spawnedProcess.stdout.on('data', (data: any) => this.logger.stdout(data));
-        spawnedProcess.stderr.on('data', (data: any) => this.logger.stderr(data));
+        spawnedProcess.stdout.on('data', (data: any) => this.logger.stdout(String(data)));
+        spawnedProcess.stderr.on('data', (data: any) => this.logger.stderr(String(data)));
         spawnedProcess.on('close', (code) => {
             this.logger.log(`Process exit with ${code}`)
             this.asyncEmit('processExit', code)
         })
-        spawnedProcess.on('error', (err: Error) => this.logger.error(`Process error: ${err}`))
-
+        spawnedProcess.on('error', (err: Error) => this.logger.error(`Process error: ${err}`));
+        (spawnedProcess.stdin as any).setEncoding('utf-8');
         this.process = spawnedProcess;
     }
 
     public sendInput(str: string)
     {
-        if (!this.process)
+        if (!this.process || !this.process.stdin)
             return
 
-        this.process.stdin?.write(addNewLine(str));
+        this.process.stdin.cork()
+        this.process.stdin.write(addNewLine(str), () => {});
+        this.process.stdin.uncork()
     }
 
     public getCommands(): CommandInfo
     {
         const commands : CommandInfo = mergeCommands(this.protocol.getCommands(), {
-            input: {
+            in: {
                 [CommandBody]: (args) => this.sendInput(args),
                 [CommandHelp]: "Send input to child process via stdin"
             }
