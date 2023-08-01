@@ -4,7 +4,7 @@
 		"target": "es6",
 		"outDir": "out",
 		"lib": [
-			"es6"
+			"ES2021"
 		],
 		"sourceMap": true,
 		"rootDir": "src",
@@ -12,8 +12,19 @@
 		/* Additional Checks */
 		"noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
 		"noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
-		"noUnusedParameters": true,  /* Report errors on unused parameters. */
+		"noUnusedParameters": false,  /* Report errors on unused parameters. */
+		"noUnusedLocals": false,
+		"noImplicitAny": false,
+		"removeComments": false,
+		"noImplicitThis": true,
+		"inlineSourceMap": false,
+		"preserveConstEnums": true,
+		"strictNullChecks": true,
 	},
+	"include": [
+		"src/**/*",
+		"tests/**/*"
+	],
 	"exclude": [
 		"node_modules",
 		".vscode-test"

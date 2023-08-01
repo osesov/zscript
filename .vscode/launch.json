@@ -6,12 +6,18 @@
 	"version": "0.2.0",
     "configurations": [
         {
-            "name": "Extension",
-            "type": "extensionHost",
-            "request": "launch",
-            "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
-            ]
-        }
+			"name": "Extension",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--disable-extensions",
+				"${workspaceFolder}/sampleWorkspace"
+			],
+			// "outFiles": [
+			// 	"${workspaceFolder}/out/**/*.js"
+			// ],
+			// "preLaunchTask": "npm: watch"
+		}
     ]
 }

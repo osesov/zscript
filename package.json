@@ -2,18 +2,39 @@
     "name": "zscript",
     "displayName": "Zodiac Script",
     "description": "Zodiac Script language support",
+    "author": {
+        "name": "Oleg Sesov",
+        "email": "oleg.sesov@orioninc.com"
+    },
     "version": "1.0.0",
-    "engines": { "vscode": "^1.80.0" },
-    "categories": [ "Programming Languages" ],
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "main": "./out/zscript.js",
+    "categories": [
+        "Programming Languages",
+        "Debuggers"
+    ],
+    "activationEvents": [
+        "*",
+        "onDebug",
+        "onCommand:extension.zscript.getProgramName",
+        "onLanguage:zscript",
+        "onDebugResolve:zscript"
+    ],
     "contributes": {
         "languages": [
             {
                 "id": "zscript",
                 "aliases": [
+                    "zs",
                     "zScript",
                     "zscript"
                 ],
-                "extensions": [ ".zs", ".zi" ],
+                "extensions": [
+                    ".zs",
+                    ".zi"
+                ],
                 "configuration": "./language-configuration.json"
             }
         ],
@@ -23,21 +44,175 @@
                 "scopeName": "source.zs",
                 "path": "./syntaxes/zscript.tmLanguage.json"
             }
+        ],
+        "breakpoints": [
+            {
+                "language": "zscript"
+            }
+        ],
+        "debuggers": [
+            {
+                "type": "zs",
+                "label": "ZScript Debug",
+                "runtime": "node",
+                "languages": [
+                    "zscript"
+                ],
+                "configurationAttributes": {
+                    "launch": {
+                        "required": [],
+                        "properties": {
+                            "target": {
+                                "type": "string",
+                                "description": "Path of executable"
+                            },
+                            "arguments": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Arguments to append after the executable. You can also use pipes."
+                            },
+                            "cwd": {
+                                "type": "string",
+                                "description": "project path"
+                            },
+                            "env": {
+                                "type": "object",
+                                "description": "Environment overriding the gdb (and in turn also the process) environment",
+                                "default": null
+                            },
+                            "pathSubstitutions": {
+                                "type": "object",
+                                "description": "Find your source using path substitutions",
+                                "default": {
+                                    "<fromPath>": "<toPath>"
+                                }
+                            },
+                            "showDevDebugOutput": {
+                                "type": "boolean",
+                                "description": "Prints all debugger interactions to the console",
+                                "default": false
+                            },
+                            "showApplicationOutput": {
+                                "type": "boolean",
+                                "description": "Prints application output to the console",
+                                "default": true
+                            },
+                            "showApplicationLogs": {
+                                "type": "boolean",
+                                "description": "Prints application log (Sent via debug) to the console",
+                                "default": false
+                            },
+                            "stopAtEntry": {
+                                "type": [
+                                    "boolean",
+                                    "string"
+                                ],
+                                "description": "Whether debugger should stop at application entry point",
+                                "default": false
+                            },
+                            "host": {
+                                "type": "string"
+                            },
+                            "port": {
+                                "type": "number"
+                            },
+                            "connectionType": {
+                                "type": "string",
+                                "enum": [
+                                    "sim",
+                                    "tcp"
+                                ]
+                            }
+                        }
+                    },
+                    "attach": {
+                        "required": [
+                            "rootDir"
+                        ],
+                        "properties": {
+                            "rootDir": {
+                                "type": "string",
+                                "description": "Absolute path to a root dir.",
+                                "default": "${workspaceFolder}/${command:AskForProgramName}"
+                            },
+                            "host": {
+                                "type": "string"
+                            },
+                            "port": {
+                                "type": "number"
+                            },
+                            "connectionType": {
+                                "type": "string",
+                                "enum": [
+                                    "sim",
+                                    "tcp"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "initialConfigurations": [
+                    {
+                        "type": "zs",
+                        "request": "launch",
+                        "name": "launch zs process",
+                        "rootDir": "${workspaceFolder}",
+                        "host": "0.0.0.0",
+                        "port": 2009,
+                        "connectionType": "tcp"
+                    }
+                ],
+                "configurationSnippets": [
+                    {
+                        "label": "ZS Debug: Launch",
+                        "description": "Configuration for launching a zs program",
+                        "body": {
+                            "type": "zs",
+                            "request": "launch",
+                            "name": "Launch zs process",
+                            "rootDir": "${workspaceFolder}"
+                        }
+                    },
+                    {
+                        "label": "ZS Debug: Attach",
+                        "description": "A new configuration for attaching a zs program",
+                        "body": {
+                            "type": "zs",
+                            "request": "attach",
+                            "name": "attach to zs process",
+                            "rootDir": "${workspaceFolder}"
+                        }
+                    }
+                ],
+                "variables": {
+                    "AskForProgramName": "extension.zscript.getProgramName"
+                }
+            }
         ]
     },
     "scripts": {
-        "//vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
-        "//postinstall": "node ./node_modules/vscode/bin/install",
-        "test": "npm run compile && node ./node_modules/vscode/bin/test",
-        "//package": "npm i && npm run compile && vsce package",
-        "package": "vsce package",
-        "preinstall": "npm run package",
-        "install": "code --install-extension ./zscript-1.0.0.vsix"
+        "vscode:prepublish": "npm run esbuild-base -- --minify",
+        "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/zscript.js --external:vscode --format=cjs --platform=node",
+        "esbuild": "npm run esbuild-base -- --sourcemap",
+        "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+        "test-compile": "tsc -p ./"
     },
     "repository": {
         "type": "git",
         "url": "git@github.com:osesov/zscript.git"
+    },
+    "devDependencies": {
+        "@types/node": "^20.4.5",
+        "@types/vscode": "^1.80.0",
+        "@vscode/debugadapter": "^1.61.0",
+        "esbuild": "^0.18.17",
+        "eslint": "^8.45.0",
+        "vsce": "^2.15.0"
+    },
+    "dependencies": {
+        "tiny-typed-emitter": "^2.1.0",
+        "tree-kill": "^1.2.2"
     }
 }
