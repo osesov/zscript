@@ -40,7 +40,7 @@
         "grammars": [
             {
                 "language": "zscript",
-                "scopeName": "source.zs",
+                "scopeName": "source.zscript",
                 "path": "./syntaxes/zscript.tmLanguage.json"
             }
         ],
