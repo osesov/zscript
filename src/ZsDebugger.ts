@@ -57,7 +57,7 @@ export interface ZsDebugConfig {
     stopAtEntry?: boolean
     pathSubstitutions?: { [k: string]: string }
 
-    target ?: string
+    program ?: string
     arguments ?: string[]
     cwd ?: string
     env ?: { [k: string]: string }
@@ -574,7 +574,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
     }
 
     public launchApp() {
-        if (!this.config.target) {
+        if (!this.config.program) {
             return
         }
 
@@ -583,7 +583,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
             APP_DEFINES: "-DGsPluginDebug"
         }
 
-        const target = String(this.config.target)
+        const program = String(this.config.program)
         const cwd = this.config.cwd ?? process.cwd()
         const args = Array.isArray(this.config.arguments) ? this.config.arguments : []
         const env = Object.assign(defaultEnv, process.env, typeof this.config.env === "object" ? this.config.env : {})
@@ -594,7 +594,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
             shell: true,
         }
 
-        const spawnedProcess = child_process.spawn(target, args, options);
+        const spawnedProcess = child_process.spawn(program, args, options);
         spawnedProcess.stdout.on('data', (data: any) => this.logger.child_process.stdout(String(data)));
         spawnedProcess.stderr.on('data', (data: any) => this.logger.child_process.stderr(String(data)));
         spawnedProcess.on('close', (code) => {
@@ -604,7 +604,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         spawnedProcess.on('error', (err: Error) => this.logger.core.error(`Process error: ${err}`));
         (spawnedProcess.stdin as any).setEncoding('utf-8');
 
-        this.logger.core.info(`Started process: ${target}, pid: ${spawnedProcess.pid}`);
+        this.logger.core.info(`Started process: ${program}, pid: ${spawnedProcess.pid}`);
         this.process = spawnedProcess;
     }
 

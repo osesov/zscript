@@ -12,7 +12,7 @@
 			"port": 2009,
 			"connectionType": "tcp",
 			"stopAtEntry": false,
-			"target": "zs-build",
+			"program": "zs-build",
 			"cwd": "/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start",
 			"showApplicationOutput": true,
 			"showApplicationLogs": false,
