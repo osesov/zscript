@@ -20,6 +20,7 @@ This extension contributes the following settings:
 ### Language Server Protocol
 
 - [Language Server Protocol](https://microsoft.github.io/language-server-protocol/)
+- Extenstion shows some suggestions for another ZScript: https://github.com/drage0/ZScript-vscode
 
 ### Debug
 
