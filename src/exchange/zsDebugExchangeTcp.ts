@@ -5,12 +5,12 @@ import { CommandInfo } from '../util';
 
 export class ZsDebugExchangeTcp extends ZsDebugExchange
 {
-    private serverSocket: net.Server;
-    private socket: net.Socket | null = null;
+    private serverSocket: net.Server | null = null;
+    private clientSocket: net.Socket | null = null;
     private buffer: string = "";
     private logger: Logger
 
-    constructor(logger: Logger, host ?: string, port ?: number)
+    constructor(logger: Logger, private host ?: string, private port ?: number)
     {
         super();
 
@@ -19,10 +19,15 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
         port ??= 2009;
         host ??= "localhost"
 
-        this.logger.core.info(`Open TCP connection to ${host}:${port}`)
+    }
+
+    public connect(): void
+    {
+        this.logger.core.info(`Open TCP connection to ${this.host}:${this.port}`)
         this.serverSocket = net.createServer(this.connected.bind(this));
-        this.serverSocket.listen(port, host, () => {
-            this.logger.core.info('ZS debug listening on ' + host + ':' + (this.serverSocket!.address() as net.AddressInfo).port)
+        this.serverSocket.listen(this.port, this.host, () => {
+            const addr = this.serverSocket!.address() as net.AddressInfo;
+            this.logger.core.info('ZS debug listening on ' + addr.address + ':' + addr.port)
         });
     }
 
@@ -36,12 +41,12 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
         const rPort = sock.remotePort
 
         this.logger.core.info(`zsDebug: connected ${rAddr ?? "unknown"}:${rPort ?? "unnown"}`);
-        if (this.socket) {
-            this.socket.end();
-            this.socket = null
+        if (this.clientSocket) {
+            this.clientSocket.destroy();
+            this.clientSocket = null
         }
 
-        this.socket = sock;
+        this.clientSocket = sock;
 
         sock.on('data', this.onData.bind(this));
         sock.on('error', this.onError.bind(this));
@@ -50,8 +55,11 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
 
     private close()
     {
-        this.socket?.end();
-        this.socket = null;
+        this.clientSocket?.destroy();
+        this.clientSocket = null;
+
+        this.serverSocket?.close();
+        this.serverSocket = null
     }
 
     private onData(data: Buffer)
@@ -80,11 +88,11 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
 
     public sendString(data: string)
     {
-        if (!this.socket)
+        if (!this.clientSocket)
             return;
 
         this.logger.comm.debug(`Send: ${data}`)
-        this.socket.write(data);
+        this.clientSocket.write(data);
     }
 
     public getCommands(): CommandInfo | undefined {

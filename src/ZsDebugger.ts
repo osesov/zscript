@@ -573,7 +573,10 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         this.emit('resume');
     }
 
-    public launchApp() {
+    public launchRequest() {
+
+        this.protocol.connect();
+
         if (!this.config.program) {
             return
         }

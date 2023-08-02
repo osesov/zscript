@@ -393,13 +393,13 @@ export class ZSDebugSession extends LoggingDebugSession
     }
 
     protected attachRequest(response: DebugProtocol.AttachResponse, args: DebugProtocol.AttachRequestArguments, request?: DebugProtocol.Request) {
-        this.runtime.launchApp();
+        this.runtime.launchRequest();
         this.sendResponse(response);
     }
 
     protected launchRequest(response: DebugProtocol.LaunchResponse, args: DebugProtocol.LaunchRequestArguments, request?: DebugProtocol.Request): void
     {
-        this.runtime.launchApp();
+        this.runtime.launchRequest();
         this.sendResponse(response);
     }
 

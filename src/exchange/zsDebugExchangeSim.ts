@@ -140,6 +140,11 @@ export class ZsDebugExchangeSim extends ZsDebugExchange {
         Promise.resolve().then(() => this.emit(name, ...data));
     }
 
+    public connect(): void
+    {
+
+    }
+
     public disconnect(): void
     {
 

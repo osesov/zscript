@@ -13,6 +13,7 @@ export interface ZsDebugExchangeEvents
 
 export abstract class ZsDebugExchange extends TypedEmitter<ZsDebugExchangeEvents>
 {
+    abstract connect(): void
     abstract sendString(data: string): void;
     abstract disconnect(): void;
     abstract getCommands(): CommandInfo | undefined;
