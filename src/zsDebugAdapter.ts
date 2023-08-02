@@ -99,13 +99,17 @@ class LoggerImpl implements Logger
             stderr: (msg: string): void => {
                 if (this.config.showApplicationOutput)
                     this.sendEvent( new OutputEvent(addNewLine(msg), 'stderr'));
+            },
+            logs: (msg: string): void => {
+                if (this.config.showApplicationLogs)
+                    this.sendEvent( new OutputEvent(addNewLine(msg), 'console'))
             }
         }
 
         this.comm = {
             debug: (msg: string): void => {
-                if (this.config.showApplicationLogs)
-                    this.sendEvent( new OutputEvent(addNewLine(msg), 'stdout') )
+                if (this.config.showDevNetworkOutput)
+                    this.sendEvent( new OutputEvent(addNewLine(msg), 'console') )
             }
         }
     }

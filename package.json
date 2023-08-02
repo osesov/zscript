@@ -93,6 +93,11 @@
                                 "description": "Prints all debugger interactions to the console",
                                 "default": false
                             },
+                            "showDevNetworkOutput": {
+                                "type": "boolean",
+                                "description": "Prints all debugger network interactions to the console",
+                                "default": false
+                            },
                             "showApplicationOutput": {
                                 "type": "boolean",
                                 "description": "Prints application output to the console",
@@ -159,6 +164,11 @@
                             "showDevDebugOutput": {
                                 "type": "boolean",
                                 "description": "Prints all debugger interactions to the console",
+                                "default": false
+                            },
+                            "showDevNetworkOutput": {
+                                "type": "boolean",
+                                "description": "Prints all debugger network interactions to the console",
                                 "default": false
                             },
                             "showApplicationOutput": {

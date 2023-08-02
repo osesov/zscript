@@ -47,7 +47,8 @@ interface Notify {
 }
 
 export interface ZsDebugConfig {
-    showDevDebugOutput?: boolean
+    showDevDebugOutput ?: boolean
+    showDevNetworkOutput ?: boolean
     connectionType?: 'sim' | 'tcp' | string
     host?: string
     port?: number
@@ -77,12 +78,13 @@ export namespace logger
     {
         stdout(msg: string): void
         stderr(msg: string): void
+        logs(msg: string): void
     }
 
 
     export interface Comm
     {
-        debug(msg: string): void
+    debug(msg: string): void
     }
 }
 export interface Logger {
@@ -316,8 +318,8 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
     }
 
     private handlePrint(frame: string): void {
-        // const lines = frame.substring(1).trim();
-        this.logger.comm.debug(frame);
+        const line = frame.substring(1).trim();
+        this.logger.child_process.logs(line);
     }
 
     private sendBreakpoints() {
