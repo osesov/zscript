@@ -14,7 +14,7 @@
 			"stopAtEntry": false,
 			"target": "zs-build",
 			"cwd": "/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start",
-			"showApplicationOutput": false,
+			"showApplicationOutput": true,
 			"showApplicationLogs": false,
 			"showDevDebugOutput": true
 		},

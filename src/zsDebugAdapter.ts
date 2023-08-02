@@ -1,6 +1,6 @@
-import { ErrorDestination, Handles, InitializedEvent, LoggingDebugSession, OutputEvent, Scope, StoppedEvent, TerminatedEvent, Thread } from "@vscode/debugadapter"
+import { ErrorDestination, Handles, InitializedEvent, LoggingDebugSession, OutputEvent, Scope, StoppedEvent, TerminatedEvent, Thread, ThreadEvent } from "@vscode/debugadapter"
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { ZsDebugger, ZsDebugStackFrame, Breakpoint, ZsDebugVariable, Logger, ZsDebugConfig, SourceLocation } from './ZsDebugger';
+import { ZsDebugger, ZsDebugStackFrame, Breakpoint, ZsDebugVariable, Logger, ZsDebugConfig, SourceLocation, logger } from './ZsDebugger';
 import { DebugConfiguration } from 'vscode';
 import { CommandBody, CommandHelp, CommandInfo, addNewLine, executeCommand, getCommandsHelp, mergeCommands } from "./util";
 
@@ -57,7 +57,61 @@ enum LogLevel
     DBG = 2
 }
 
-export class ZSDebugSession extends LoggingDebugSession implements Logger
+class LoggerImpl implements Logger
+{
+    public readonly core: logger.Core
+    public readonly child_process: logger.ChildProcess
+    public readonly comm: logger.Comm
+
+    constructor(private config: ZsDebugConfig, private sendEvent: (event: DebugProtocol.Event) => void )
+    {
+
+        this.core = {
+            important: (msg: string): void => {
+                this.sendEvent(new OutputEvent(addNewLine(msg), 'important'))
+            },
+
+            error: (msg: string): void =>
+            {
+                if (this.config.showDevDebugOutput)
+                    this.sendEvent( new OutputEvent("### ERR: " + addNewLine(msg), 'important'))
+            },
+
+            info: (msg: string): void =>
+            {
+                if (this.config.showDevDebugOutput)
+                    this.sendEvent( new OutputEvent("### INF: " + addNewLine(msg), 'console'))
+            },
+
+            debug: (msg: string): void =>
+            {
+                if (this.config.showDevDebugOutput)
+                    this.sendEvent( new OutputEvent("### DBG: " + addNewLine(msg), 'console'))
+            }
+        }
+
+        this.child_process = {
+            stdout: (msg: string): void => {
+                if (this.config.showApplicationOutput)
+                    this.sendEvent( new OutputEvent(addNewLine(msg), 'stdout'));
+            },
+
+            stderr: (msg: string): void => {
+                if (this.config.showApplicationOutput)
+                    this.sendEvent( new OutputEvent(addNewLine(msg), 'stderr'));
+            }
+        }
+
+        this.comm = {
+            debug: (msg: string): void => {
+                if (this.config.showApplicationLogs)
+                    this.sendEvent( new OutputEvent(addNewLine(msg), 'stdout') )
+            }
+        }
+    }
+}
+
+export class ZSDebugSession extends LoggingDebugSession
 {
     // hardcode thread id
     private readonly threadID = 1;
@@ -69,6 +123,7 @@ export class ZSDebugSession extends LoggingDebugSession implements Logger
     private globals: DebugProtocol.Variable[] | null = null
     private roots: DebugProtocol.Variable[] | null = null
     private config: ZsDebugConfig
+    private logger: LoggerImpl
 
     public constructor(fileAccessor: FileAccessor, config: DebugConfiguration) {
         super("zs-debug.txt");
@@ -78,7 +133,9 @@ export class ZSDebugSession extends LoggingDebugSession implements Logger
 		this.setDebuggerColumnsStartAt1(false);
 
         this.config = config as ZsDebugConfig;
-        this.runtime = new ZsDebugger(this, this.config);
+        this.logger = new LoggerImpl(this.config, this.sendEvent.bind(this))
+
+        this.runtime = new ZsDebugger(this.logger, this.config);
         this.runtime.on('breakpoint', (data) => this.onBreakpoint(data));
         this.runtime.on('start',() => this.sendEvent(new InitializedEvent()));
         this.runtime.on('pause', () => this.onPauseExecution());
@@ -88,39 +145,6 @@ export class ZSDebugSession extends LoggingDebugSession implements Logger
             this.sendEvent( new OutputEvent(`process exited with exit_code: ${code}\n`))
             this.sendEvent( new TerminatedEvent())
         })
-    }
-
-    error(msg: string): void
-    {
-        if (this.config.showDevDebugOutput)
-            this.sendEvent( new OutputEvent("### ERR: " + addNewLine(msg), 'important'))
-    }
-
-    log(msg: string): void
-    {
-        if (this.config.showDevDebugOutput)
-            this.sendEvent( new OutputEvent("### INF: " + addNewLine(msg), 'console'))
-    }
-
-    debug(msg: string): void
-    {
-        if (this.config.showDevDebugOutput)
-            this.sendEvent( new OutputEvent("### DBG: " + addNewLine(msg), 'console'))
-    }
-
-    stdout(msg: string): void {
-        if (this.config.showApplicationOutput)
-            this.sendEvent( new OutputEvent(addNewLine(msg), 'stdout'));
-    }
-
-    stderr(msg: string): void {
-        if (this.config.showApplicationOutput)
-            this.sendEvent( new OutputEvent(addNewLine(msg), 'stderr'));
-    }
-
-    commLog(msg: string): void {
-        if (this.config.showApplicationLogs)
-            this.sendEvent( new OutputEvent(addNewLine(msg), 'stdout') )
     }
 
     onPauseExecution(): void

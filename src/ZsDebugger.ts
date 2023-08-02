@@ -63,17 +63,32 @@ export interface ZsDebugConfig {
     env ?: { [k: string]: string }
 }
 
+export namespace logger
+{
+    export interface Core
+    {
+        important(msg: string): void
+        debug(msg: string): void
+        info(msg: string): void
+        error(msg: string): void
+    }
+
+    export interface ChildProcess
+    {
+        stdout(msg: string): void
+        stderr(msg: string): void
+    }
+
+
+    export interface Comm
+    {
+        debug(msg: string): void
+    }
+}
 export interface Logger {
-    debug(msg: string): void
-    log(msg: string): void
-    error(msg: string): void
-
-    // child process output
-    stdout(msg: string): void
-    stderr(msg: string): void
-
-    // connection message
-    commLog(msg: string): void
+    core: logger.Core
+    child_process: logger.ChildProcess
+    comm: logger.Comm
 }
 
 // see https://stackoverflow.com/a/61609010
@@ -124,12 +139,12 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
 
         switch (config.connectionType ?? "tcp") {
             case 'sim':
-                this.logger.log("Use sim connection");
+                this.logger.core.info("Use sim connection");
                 this.protocol = new ZsDebugExchangeSim();
                 break;
 
             case 'tcp':
-                this.logger.log(`Use TCP connection ${config.port}:${config.port}`)
+                this.logger.core.info(`Use TCP connection ${config.port}:${config.port}`)
                 this.protocol = new ZsDebugExchangeTcp(this.logger, config.host, config.port);
                 break;
 
@@ -165,7 +180,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
 
                     return Promise.any([processDone, timeout(5000)])
                 })
-                .then( (completed) => this.logger.error(`Unable to wait for process completion ${pid}`))
+                .then( (completed) => this.logger.core.error(`Unable to wait for process completion ${pid}`))
             }
         }
         this.started = false;
@@ -231,13 +246,16 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         this.interactiveState();
 
         const lines = frame.split('\n');
-        // const module_name = lines[0].split(' ')[1];
+        const module_name = lines[0].split(' ')[1];
 
         if (lines.length < 2)
             throw Error("Unknown debug protocol: " + frame);
 
         if (lines[1] != "ver 2")
             throw Error("Unknown debug protocol: " + frame);
+
+        if (!module_name)
+            this.logger.core.important('Module seems to be build without debug info.\nCheck environment variables: CUSTOM_GS_KEYS contains "-D" and APP_DEFINES contains "-DGsPluginDebug" during build');
 
         if (this.started)
             this.sendBreakpoints();
@@ -299,7 +317,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
 
     private handlePrint(frame: string): void {
         // const lines = frame.substring(1).trim();
-        this.logger.commLog(frame);
+        this.logger.comm.debug(frame);
     }
 
     private sendBreakpoints() {
@@ -577,14 +595,16 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         }
 
         const spawnedProcess = child_process.spawn(target, args, options);
-        spawnedProcess.stdout.on('data', (data: any) => this.logger.stdout(String(data)));
-        spawnedProcess.stderr.on('data', (data: any) => this.logger.stderr(String(data)));
+        spawnedProcess.stdout.on('data', (data: any) => this.logger.child_process.stdout(String(data)));
+        spawnedProcess.stderr.on('data', (data: any) => this.logger.child_process.stderr(String(data)));
         spawnedProcess.on('close', (code) => {
-            this.logger.log(`Process exit with ${code}`)
+            this.logger.core.info(`Process exit with ${code}`)
             this.asyncEmit('processExit', code)
         })
-        spawnedProcess.on('error', (err: Error) => this.logger.error(`Process error: ${err}`));
+        spawnedProcess.on('error', (err: Error) => this.logger.core.error(`Process error: ${err}`));
         (spawnedProcess.stdin as any).setEncoding('utf-8');
+
+        this.logger.core.info(`Started process: ${target}, pid: ${spawnedProcess.pid}`);
         this.process = spawnedProcess;
     }
 

@@ -19,10 +19,10 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
         port ??= 2009;
         host ??= "localhost"
 
-        this.logger.log(`Open TCP connection to ${host}:${port}`)
+        this.logger.core.info(`Open TCP connection to ${host}:${port}`)
         this.serverSocket = net.createServer(this.connected.bind(this));
         this.serverSocket.listen(port, host, () => {
-            this.logger.log('ZS debug listening on ' + host + ':' + (this.serverSocket!.address() as net.AddressInfo).port)
+            this.logger.core.info('ZS debug listening on ' + host + ':' + (this.serverSocket!.address() as net.AddressInfo).port)
         });
     }
 
@@ -35,7 +35,7 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
         const rAddr = sock.remoteAddress;
         const rPort = sock.remotePort
 
-        this.logger.log(`zsDebug: connected ${rAddr ?? "unknown"}:${rPort ?? "unnown"}`);
+        this.logger.core.info(`zsDebug: connected ${rAddr ?? "unknown"}:${rPort ?? "unnown"}`);
         if (this.socket) {
             this.socket.end();
             this.socket = null
@@ -56,7 +56,7 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
 
     private onData(data: Buffer)
     {
-        this.logger.debug(`Got data: ${data}`);
+        this.logger.comm.debug(`Got data: ${data}`);
 
         for (let offs  = 0; offs < data.length; ++offs) {
             if (data.readInt8(offs) === 0) {
@@ -73,7 +73,7 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
 
     private onError(error: Error)
     {
-        this.logger.error('******* ERROR ' + error + ' *******');
+        this.logger.core.error('******* ERROR ' + error + ' *******');
         this.close();
         this.emit('error', error)
     }
@@ -83,7 +83,7 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
         if (!this.socket)
             return;
 
-        this.logger.debug(`Send: ${data}`)
+        this.logger.comm.debug(`Send: ${data}`)
         this.socket.write(data);
     }
 
