@@ -33,10 +33,9 @@ This extension contributes the following settings:
 
 ### Syntax coloring
 
+- [Syntax Highlight guide](https://code.visualstudio.com/api/language-extensions/syntax-highlight-guide)
+- [Semantic highlight guide](https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide)
+- [Color Theme](https://code.visualstudio.com/api/extension-guides/color-theme#syntax-colors)
+
+- [Writing a TextMate Grammar: Some Lessons Learned](https://www.apeth.com/nonblog/stories/textmatebundle.html)
 - [TextMate language grammars](https://macromates.com/manual/en/language_grammars)
-- [Writing a TextMate Grammar](https://www.apeth.com/nonblog/stories/textmatebundle.html)
-
-
-## TODO
-
-- [ ] Chech and complete attach section
