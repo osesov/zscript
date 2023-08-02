@@ -6,6 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [1.0.1]
+
+- Ensure listening socket is closed on terminateRequest and created on launchRequest only
+
 ## [1.0.0]
 
 - Initial release.
