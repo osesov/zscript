@@ -2,11 +2,13 @@
     "name": "zscript",
     "displayName": "Zodiac Script",
     "description": "Zodiac Script language support",
+    "icon": "images/icon.png",
     "author": {
         "name": "Oleg Sesov",
         "email": "oleg.sesov@orioninc.com"
     },
-    "version": "1.0.1",
+    "publisher": "Oleg Sesov",
+    "version": "1.0.1+",
     "engines": {
         "vscode": "^1.80.0"
     },

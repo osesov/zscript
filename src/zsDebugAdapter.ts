@@ -2,7 +2,7 @@ import { ErrorDestination, Handles, InitializedEvent, LoggingDebugSession, Outpu
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { ZsDebugger, ZsDebugStackFrame, Breakpoint, ZsDebugVariable, Logger, ZsDebugConfig, SourceLocation, logger } from './ZsDebugger';
 import { DebugConfiguration } from 'vscode';
-import { CommandBody, CommandHelp, CommandInfo, addNewLine, executeCommand, getCommandsHelp, mergeCommands } from "./util";
+import { CommandBody, CommandHelp, CommandInfo, addNewLine, executeCommand, getCommandsHelp, getWord, mergeCommands } from "./util";
 
 export interface FileAccessor {
 	isWindows: boolean;
@@ -119,8 +119,9 @@ export class ZSDebugSession extends LoggingDebugSession
 {
     // hardcode thread id
     private readonly threadID = 1;
-    private _reportProgress = false;
-    private _useInvalidatedEvent = false;
+    private reportProgress = false;
+    private useInvalidatedEvent = false;
+    private supportsVariableType = false;
     private runtime : ZsDebugger;
     private variableHandles = new Handles<GetVariablesRequest>();
     private stack: ZsRuntimeStackFrame[] | null = null
@@ -291,10 +292,14 @@ export class ZSDebugSession extends LoggingDebugSession
     protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments, request?: DebugProtocol.InitializeRequest): void {
 
         if (args.supportsProgressReporting) {
-            this._reportProgress = true;
+            this.reportProgress = true;
         }
         if (args.supportsInvalidatedEvent) {
-            this._useInvalidatedEvent = true;
+            this.useInvalidatedEvent = true;
+        }
+
+        if (args.supportsVariableType) {
+            this.supportsVariableType = true;
         }
 
         // build and return the capabilities of this debug adapter:
@@ -310,7 +315,7 @@ export class ZSDebugSession extends LoggingDebugSession
 		response.body.supportsConditionalBreakpoints = false;
 
         // make VS Code use 'evaluate' when hovering over source
-        response.body.supportsEvaluateForHovers = false;
+        response.body.supportsEvaluateForHovers = true;
 
         // make VS Code show a 'step back' button
         response.body.supportsStepBack = false;
@@ -585,9 +590,17 @@ export class ZSDebugSession extends LoggingDebugSession
     {
         if (args.context === 'repl') {
             executeCommand( this.getCommands(), args.expression );
+            this.sendResponse(response);
         }
-
-        this.sendResponse(response);
+        else if (args.context === 'hover' || args.context === 'watch') {
+            this.runtime.evalVariableValue(args.expression)
+            .then( (value) => response.body = {
+                result: value?.value ?? "",
+                variablesReference: 0,
+                type: value?.type
+            })
+            .then(() => this.sendResponse(response) );
+        }
     }
 
     protected stepInTargetsRequest(response: DebugProtocol.StepInTargetsResponse, args: DebugProtocol.StepInTargetsArguments, request?: DebugProtocol.Request): void

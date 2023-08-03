@@ -6,11 +6,14 @@ import * as child_process from 'child_process'
 import treeKill = require('tree-kill');
 import { addNewLine, CommandBody, CommandHelp, CommandInfo, mergeCommands } from './util';
 
+export type ZsDebugType = '' | 'string' | 'object' | 'integer' | 'function' | 'number' | 'ptr' | 'boolean'
+
 export interface ZsDebugVariable {
     name: string
     obj: boolean
     func: boolean
-    value: string | number
+    value: string
+    type: ZsDebugType
 }
 
 export interface ZsDebugStackFrame {
@@ -367,11 +370,30 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         const isFunc = v.startsWith("func ");
         if (isFunc)
             v = this.splitString(v, ' ')[1];
+
+        let type: ZsDebugType = ""
+
+        if (isObj)
+            type = "object"
+        else if (isFunc)
+            type = "function"
+        else if (v.startsWith('"'))
+            type = "string"
+        else if (v.match("^[0-9]+"))
+            type = "integer"
+        else if (v.match("^[0-9.ef]+"))
+            type = "number"
+        else if (v.match("null"))
+            type = "ptr"
+        else if (v.match("^(true|false)$"))
+            type = "boolean"
+
         return {
             name: n,
             obj: isObj,
             func: isFunc,
-            value: v
+            value: v,
+            type: type
         }
     }
 
@@ -633,4 +655,45 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         })
         return commands;
     }
+
+    async evalVariableValue(path: string): Promise<undefined | ZsDebugVariable>
+    {
+        const evaluate = async (path: string, scope: ZsDebugVariable[]): Promise<undefined | ZsDebugVariable> =>
+        {
+            const s = path.split('.');
+            const name = s[0];
+            const rest = s.slice(1).join('.')
+
+            const value = scope.find((e) => e.name === name || e.name === name + "*")
+            if (!value)
+                return
+
+            if (rest === "")
+                return value
+
+            if (!value.obj)
+                return
+
+            return evaluate(rest, await this.getObjectVariable(value.value))
+        }
+
+        let value : undefined | ZsDebugVariable
+        if (this.stack && this.stack.length > 0) {
+            const stack = this.stack[0]
+            value = await evaluate(path, stack.variables);
+
+            if (!value) {
+                const thisMember = stack.variables.find((e) => e.name === "this")
+                if (thisMember && thisMember.obj)
+                    value = await evaluate(path, await this.getObjectVariable(thisMember.value))
+            }
+        }
+
+        if (!value) {
+            value = await evaluate(path, await this.getGlobalVariables())
+        }
+
+        return value;
+    }
+
 };
