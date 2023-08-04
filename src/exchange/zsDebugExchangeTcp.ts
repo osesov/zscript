@@ -50,6 +50,11 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
 
         sock.on('data', this.onData.bind(this));
         sock.on('error', this.onError.bind(this));
+        sock.on('close', () => {
+            this.clientSocket?.destroy();
+            this.clientSocket = null;
+            this.emit('disconnect')
+        });
         this.emit('connect');
     }
 
@@ -70,7 +75,7 @@ export class ZsDebugExchangeTcp extends ZsDebugExchange
             if (data.readInt8(offs) === 0) {
                 const line = this.buffer
                 this.buffer = ""
-                super.emit('data', line);
+                this.emit('data', line);
             }
 
             else {

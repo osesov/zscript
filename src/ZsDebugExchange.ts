@@ -7,6 +7,7 @@ const simulator = true;
 export interface ZsDebugExchangeEvents
 {
     'connect': () => void
+    'disconnect': () => void
     'data': (data: string) => void
     'error': (data: Error) => void
 }

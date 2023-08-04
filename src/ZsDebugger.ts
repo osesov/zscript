@@ -101,6 +101,7 @@ export interface Logger {
 interface ZsDebugRuntimeEvents {
     'start': () => void
     'connected': () => void
+    'disconnected': () => void
     'pause': () => void
     'resume': () => void
     'startpoint': () => void
@@ -159,6 +160,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         this.protocol.on('data', (frame) => this.onFrame(frame));
         this.protocol.on('error', (reason: any) => this.getFrameHandler()?.reject(reason))
         this.protocol.on('connect', () => this.emit('connected'))
+        this.protocol.on('disconnect', () => this.emit('disconnected'))
     }
 
     asyncEmit<T extends keyof ZsDebugRuntimeEvents>(event: T, ...args: Parameters<ZsDebugRuntimeEvents[T]>): void {

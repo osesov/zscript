@@ -8,7 +8,7 @@
         "email": "oleg.sesov@orioninc.com"
     },
     "publisher": "Oleg Sesov",
-    "version": "1.0.1+",
+    "version": "1.0.2",
     "engines": {
         "vscode": "^1.80.0"
     },
