@@ -6,6 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [1.0.3]
+
+- package cleanup
+
 ## [1.0.2]
 
 - Improve syntax highlighting
