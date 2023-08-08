@@ -20,7 +20,6 @@
     "activationEvents": [
         "onDebug",
         "onCommand:extension.zscript.getProgramName",
-        "onLanguage:zscript",
         "onDebugResolve:zscript"
     ],
     "contributes": {

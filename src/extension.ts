@@ -2,7 +2,7 @@
 
 import * as vscode from 'vscode';
 import { CancellationToken, DebugConfiguration, ProviderResult, WorkspaceFolder } from 'vscode';
-import { FileAccessor, ZSDebugSession } from './zsDebugAdapter';
+import { FileAccessor, ZsDebugAdapter } from './ZsDebugAdapter';
 
 function pathToUri(path: string) {
 	try {
@@ -32,7 +32,7 @@ export const workspaceFileAccessor: FileAccessor = {
 class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 
 	createDebugAdapterDescriptor(_session: vscode.DebugSession): ProviderResult<vscode.DebugAdapterDescriptor> {
-		return new vscode.DebugAdapterInlineImplementation(new ZSDebugSession(workspaceFileAccessor, _session.configuration));
+		return new vscode.DebugAdapterInlineImplementation(new ZsDebugAdapter(workspaceFileAccessor, _session.configuration));
 	}
 }
 
@@ -66,7 +66,7 @@ class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
 
 export function activate(context: vscode.ExtensionContext) {
 
-	console.error("Activate zs debugger");
+	console.log("Activate zs debugger");
 
     context.subscriptions.push(vscode.commands.registerCommand('extension.zscript.getProgramName', config => {
 		return vscode.window.showInputBox({

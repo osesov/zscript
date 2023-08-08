@@ -104,7 +104,7 @@ class LoggerImpl implements Logger {
     }
 }
 
-export class ZSDebugSession extends LoggingDebugSession {
+export class ZsDebugAdapter extends LoggingDebugSession {
     // hardcode thread id
     private readonly threadID = 1;
     private reportProgress = false;

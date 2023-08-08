@@ -1,4 +1,14 @@
 .vscode/**
 .vscode-test/**
+.github/**
+debug/
+orig/
+!out/zscript.js
+!out/zscript.js.map
+out/
+src/
+
 .gitignore
+.gitattributes
 vsc-extension-quickstart.md
+*.vsix
