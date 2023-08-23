@@ -1,8 +1,12 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { FileAccessor } from './debug/ZsDebugAdapter';
-import { zsDebugInit } from './debug/ZsDebugExtension';
+import { window as Window } from 'vscode';
+import { FileAccessor } from './Debugger/ZsDebugAdapter';
+import { zsDebugInit } from './Debugger/ZsDebugExtension';
+import { zsLanguageService } from './LanguageServer/zsLanguageService';
+import { VscodeLogger } from './VscodeLogger';
+import { languageId } from './common';
 
 function pathToUri(path: string) {
 	try {
@@ -30,7 +34,10 @@ export const workspaceFileAccessor: FileAccessor = {
 };
 
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext)
+{
+	const outputChannel: vscode.OutputChannel = Window.createOutputChannel('Zodiac Script', languageId);
+	const logger = new VscodeLogger(outputChannel)
 
     context.subscriptions.push(vscode.commands.registerCommand('extension.zscript.getProgramName', config => {
 		return vscode.window.showInputBox({
@@ -39,9 +46,14 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	}));
 
-	zsDebugInit(context, workspaceFileAccessor)
+	context.subscriptions.push(outputChannel);
+
+	zsDebugInit(context, workspaceFileAccessor);
+	zsLanguageService.start(context, logger);
 }
 
-export function deactivate() {
+export function deactivate() : Thenable<void> | undefined
+{
 	// nothing to do
+	return zsLanguageService.stop();
 }

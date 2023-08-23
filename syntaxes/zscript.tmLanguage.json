@@ -17,7 +17,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.zscript",
-				"match": "\\b(if|else|switch|case|default|do|while|for|return|enum|interface|class|break|continue)\\b"
+				"match": "\\b(if|else|switch|case|default|do|while|for|return|enum|interface|class|break|continue|implements|type|const|mod|shl|shr|or|and|xor|as|not|_)\\b"
 			}]
 		},
 		"comments":{
@@ -98,7 +98,7 @@
 		},
 		"types": {
 			"name": "entity.name.type.zscript",
-			"match": "\\b(int|str|long|bool|float|double|void)\\b"
+			"match": "\\b(int|str|long|bool|float|double|void|ptr|fix|byte)\\b"
 		},
 		"modifiers": {
 			"name": "keyword.other.zscript",

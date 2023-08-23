@@ -1,0 +1,23 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "../dist/client/src",
+    "rootDir": "src",
+    "rootDirs": [
+      ".",
+      "../dist"
+    ]
+  },
+  "references": [
+    {
+      "path": "../zslib"
+    }
+  ],
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

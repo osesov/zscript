@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { CancellationToken, DebugConfiguration, ProviderResult, WorkspaceFolder } from 'vscode';
 import { FileAccessor, ZsDebugAdapter } from './ZsDebugAdapter';
+import { languageId } from '../common';
 
 class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 	constructor(private workspaceFileAccessor: FileAccessor)
@@ -24,7 +25,7 @@ class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
 		// if launch.json is missing or empty
 		if (!config.type && !config.request && !config.name) {
 			const editor = vscode.window.activeTextEditor;
-			if (editor && editor.document.languageId === 'zscript') {
+			if (editor && editor.document.languageId === languageId) {
 				config.type = 'zs';
 				config.name = 'zsDebug: attach';
 				config.request = 'attach';

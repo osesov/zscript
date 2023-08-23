@@ -1,0 +1,6 @@
+{
+    "zscript.includeDir": [
+        "/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start/scripts",
+        "/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start/scripts/framework"
+    ]
+}

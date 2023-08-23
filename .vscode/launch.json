@@ -5,6 +5,14 @@
 {
 	"version": "0.2.0",
     "configurations": [
+		{
+			"name": "Attach to Chrome",
+			"port": 9222,
+			"request": "attach",
+			"type": "chrome",
+			"webRoot": "${workspaceFolder}"
+		},
+
         {
 			"name": "Extension",
 			"type": "extensionHost",
@@ -18,6 +26,39 @@
 			// 	"${workspaceFolder}/out/**/*.js"
 			// ],
 			// "preLaunchTask": "npm: watch"
-		}
+		},
+		{
+			"name": "Attach to Language Server",
+			"port": 6009,
+			"request": "attach",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"type": "node"
+		},
+		{
+			"name": "Debug build.js",
+			"program": "${workspaceFolder}/build.js",
+			"request": "launch",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"type": "node"
+		},
+		{
+			"name": "p.ts",
+			"type": "node",
+			"request": "launch",
+			"args": [
+				"../zslib/src/p.ts"
+			],
+			"runtimeArgs": [
+				"-r",
+				"ts-node/register"
+			],
+			"cwd": "${workspaceRoot}/server",
+			"protocol": "inspector",
+			"internalConsoleOptions": "openOnSessionStart"
+		},
     ]
 }
