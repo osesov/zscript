@@ -19,16 +19,18 @@ Chunk
     / _ IncludeDirective
 
     / _ "{" { helper.openCurly() }
-    / _ "}" { helper.closeCurly(unitInfo, location()) }
+    / _ "}" { const name = helper.closeCurly(unitInfo, location()); if (name) helper.trace(location(), 'END', name) }
 
     / _ & {return helper.isTopLevel()}   ClassDeclaration
+    / _ & {return helper.isTopLevel()}   GlobalVariable
+    / _ & {return helper.isTopLevel()}   Function
     / _ & {return helper.isClass()}      ClassMethod
     / _ & {return helper.isClass()}      ClassVariableDeclaration
     / _ & {return helper.isTopLevel()}   InterfaceDeclaration
     / _ & {return helper.isInterface()}  InterfaceMethodDeclaration
     / _ & {return helper.isInterface()}  PropertyDeclaration
     / _ & {return helper.isTopLevel()}   TypeDeclaration
-    / _ & {return helper.isMethod()}     MethodExpression
+    / _ & {return helper.isMethod() || helper.isFunction()}     MethodExpression
 
     // TODO: this consumes sime unknown input to avoid errors
     // Comment and implement!
@@ -71,37 +73,73 @@ EndifDirective
 DefineDirective
     = HashToken Spaces? "define" !IdentChar Spaces name:IdentToken Spaces? PreprocessorLine
         {
-            console.log(`define '${name}'`)
+            helper.trace(location(), 'DEFINE', name)
             unitInfo.addDefine(name, location(), helper.docBlock);
         }
 
 IncludeDirective
     = HashToken Spaces? "include" !IdentChar Spaces ["] file:([^"\n]*) ["] WhiteSpace
-            { unitInfo.addInclude(false, file.join(''), location()) }
+        {
+            const fileName = file.join('');
+            helper.trace(location(), "INCLUDE", fileName)
+            unitInfo.addInclude(false, fileName, location())
+        }
 
     / HashToken Spaces? "include" !IdentChar Spaces [<] file:([^>\n]*) [>] WhiteSpace
-            { unitInfo.addInclude(true, file.join(''), location()) }
+        {
+            const fileName = file.join('');
+            helper.trace(location(), "INCLUDE", fileName)
+            unitInfo.addInclude(true, fileName, location())
+        }
 
 PreprocessorLine
     = [^\n\r]* '\r'? "\n"
 
+Expr
+    = StringToken
+    / BlockCommentToken
+    / LineCommentToken
+    / [^=;,]+
+
+Variables
+    = ( // &{return ParserHelper.beginOfStatement(input, range())}
+        name:IdentToken ( _ "=" _ Expr )?
+        { return [name, location()] }
+    )|1.., _ "," _ |
+
+GlobalVariable
+    = type:Type _ vars:Variables _ ";"
+        {
+            helper.trace(location(), `global ${vars.map(e => e[0])}, type ${type}`)
+            unitInfo.addGlobalVariable(type, vars, location(), helper.docBlock)
+        }
+
+Function
+    = type:Type _ name:IdentToken _ "(" args:MethodArgumentsDeclaration? _ ")" _ &( '{' )
+        {
+            helper.trace(location(), 'Global method', name)
+
+            helper.beginContext(CurrentContext.FUNCTION, name, location())
+            unitInfo.beginGlobalFunction(type, name, args, location(), helper.docBlock)
+        }
+
 InterfaceDeclaration
     = InterfaceToken _ name:IdentToken inherit:( _ ":" _ @IdentToken)? _ &('{')
         {
-            console.log(`interface ${name}`);
-            helper.beginContext(CurrentContext.INTERFACE, name)
+            helper.trace(location(), 'INTERFACE', name)
+            helper.beginContext(CurrentContext.INTERFACE, name, location())
             unitInfo.beginInterface(name, inherit, location(), helper.docBlock)
         }
     / InterfaceToken _ name:IdentToken _ ';'
         {
             // forward interface declaration
-            console.log(`forward interface ${name}`);
+            helper.trace(location(), `forward interface ${name}`);
         }
 
 InterfaceMethodDeclaration
     = type:Type _ name:IdentToken _ "(" args:MethodArgumentsDeclaration? ")" _ ';'
         {
-            console.log('Method: ', name)
+            helper.trace(location(), 'Method: ', name)
             unitInfo.addInterfaceMethod(type, name, args, location(), helper.docBlock)
         }
 
@@ -110,65 +148,62 @@ MethodArgumentsDeclaration
     = @MethodArgument |.., _ "," _ |
 
 MethodArgument
-    = _ type:Type _ name:IdentToken { return [type, name] }
+    = type:Type _ name:IdentToken { return [type, name, location()] }
 
 MethodExpression
-    = StringToken
-    / type:Type _ name:IdentToken _ ("=" / ";")
+    = // &{ return ParserHelper.beginOfStatement(input, range())}
+    type:Type _ vars:Variables _ ";"
         {
-            console.log(`local ${name}, type ${type}`)
-            unitInfo.addMethodVariable(type, name, location(), helper.docBlock)
+            helper.trace(location(), `local ${vars.map(e => e[0])}, type ${type}`)
+            unitInfo.addMethodVariables(type, vars, location(), helper.docBlock)
         }
 
 PropertyDeclaration
     = type:Type _ name:IdentToken _ ";"
         {
-            console.log(`PropRead ${name}, type ${type}`)
+            helper.trace(location(), `PropRead ${name}, type ${type}`)
             unitInfo.addReadProperty(type, name, location(), helper.docBlock)
         }
     / name:IdentToken _ "=" _ type:Type ";"
         {
-            console.log(`PropWrite ${name}, type ${type}`)
+            helper.trace(location(), `PropWrite ${name}, type ${type}`)
             unitInfo.addWriteProperty(type, name, location(), helper.docBlock)
         }
 
 TypeDeclaration
     = "type" _ name:IdentToken t:([^;]*) ";"
         {
-            console.log(`type ${name}`)
-            unitInfo.addType(name, t.join(''.trim()), helper.docBlock)
+            helper.trace(location(), `type ${name}`)
+            unitInfo.addType(name, t.join(''.trim()), location(), helper.docBlock)
         }
 
 ClassDeclaration
     = ClassToken _ name:IdentToken _ impl:("implements" _ @IdentToken) _ &('{')
         {
-            console.log(`class ${name}, impl ${impl}`)
-            helper.beginContext(CurrentContext.CLASS, name)
+            helper.trace(location(), `class ${name}, impl ${impl}`)
+            helper.beginContext(CurrentContext.CLASS, name, location())
             unitInfo.beginClass(name, impl, location(), helper.docBlock)
         }
 
     / ClassToken _ name:IdentToken _ ';'
         {
             // forward class declaration
-            console.log(`forward class ${name}, impl ${impl}`)
+            helper.trace(location(), `forward class ${name}, impl ${impl}`)
         }
 
 ClassMethod
     = visibility:Visibility _ type:Type _ name:IdentToken _ "(" args:MethodArgumentsDeclaration? ")" _ &( '{' )
         {
-            console.log(`Class Method: ${name}`)
-            helper.beginContext(CurrentContext.METHOD, name)
+            helper.trace(location(), 'CLASS METHOD', name)
 
-            unitInfo.beginClassMethod(visibility, type, name, args.map( e => ({
-                type: e[0],
-                name: e[1]
-            })), location(), helper.docBlock)
+            helper.beginContext(CurrentContext.METHOD, name, location())
+            unitInfo.beginClassMethod(visibility, type, name, args, location(), helper.docBlock)
         }
 
 ClassVariableDeclaration
     = type:Type _ name:IdentToken _ ";"
         {
-            console.log(`variable ${name}, type ${type}`)
+            helper.trace(location(), `variable ${name}, type ${type}`)
             unitInfo.addClassVariable(type, name, location(), helper.docBlock)
         }
 
@@ -178,12 +213,13 @@ Visibility
     / _ @"private"
 
 Type
-    = PrimitiveType
+    = n:PrimitiveType { return [n]}
     / CustomType
 
 CustomType
-    = IdentToken
-    / (@"ptr" _ @IdentToken)
+    = (@"ptr" _ @IdentToken)
+    / (@"this" _ @IdentToken)
+    / n:IdentToken { return [n]}
 
 PrimitiveType
     = "void"

@@ -19,7 +19,7 @@
 			"request": "launch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				// "--disable-extensions",
+				"--disable-extensions",
 				"${workspaceFolder}/sampleWorkspace"
 			],
 			// "outFiles": [

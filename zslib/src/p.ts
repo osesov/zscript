@@ -3,9 +3,7 @@ import * as parser from './zscript-parse'
 import * as path from 'path'
 import * as fs from 'fs'
 import { UnitInfo } from './lang'
-import { createRepository } from './zsRepository'
-import { FilePosition, Logger } from './logger'
-import * as vscode from 'vscode'
+import { ConsoleSink, LogLevel, logSystem } from './logger'
 
 const topDir = '/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start/scripts'
 // const fileName = "gui/tcui/guide/GuideChannelListItem.zs"
@@ -15,45 +13,26 @@ const fileName = 'framework/Scene.zs'
 const filePath = path.resolve(topDir, fileName)
 const text = fs.readFileSync(filePath, 'utf-8')
 
-const logger = new class implements Logger
-{
-    info(msg: string, position?: FilePosition | undefined): void {
-        console.info(msg)
-    }
-
-    warn(msg: string, position?: FilePosition | undefined): void {
-        console.warn(msg)
-    }
-
-    error(msg: string, ...args: any[]): void {
-        console.error(msg, ...args)
-    }
-
-    debug(msg: string): void {
-        console.debug(msg)
-    }
-}
-
 async function main()
 {
-    const repo = createRepository({includeDirs: []}, logger)
+    logSystem.addSink( new ConsoleSink )
+    logSystem.setLevel(LogLevel.DEBUG)
+
     try {
+        const logger = logSystem.getLogger("main")
+        const begin = Date.now()
         const result: UnitInfo = parser.parse(text, {
             grammarSource: path.relative(process.cwd(), filePath)
         })
 
-        console.log('RESULT', result)
+        const end = Date.now()
 
-        const token = new vscode.CancellationTokenSource()
-
-        const compl = await repo.getCompletions(fileName, "SceneNode", {
-            line: 1,
-            column: 1
-        }, token.token)
+        logger.info('Took {time}', (end - begin) / 1000);
+        logger.info('Parse result: {RESULT}', result)
     }
 
-    catch (e: any) {
-        if (typeof e.format === "function") {
+    catch (e: unknown) {
+        if (e instanceof parser.PeggySyntaxError) {
             console.error(e.format([
                 { source: fileName, text },
             ]));

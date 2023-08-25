@@ -1,64 +1,38 @@
-import { OutputChannel } from 'vscode';
-import { FilePosition, Logger } from '../../zslib/src/logger';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { LogOutputChannel } from 'vscode';
+import { LogEvent, LogLevel, LogMessageTemplate, LogSink, logSystem } from '../../zslib/src/logger';
 
-function formatMessage(msg: string, ...args: any[]): string
+export class VSCodeSink implements LogSink
 {
-    const seen = new Set<number>
-    const text = msg.replace(/\{(\d+)\}/g, function(a) {
-        const indexStr = a.match(/(\d+)/g)
-        if (!indexStr)
-            return
+    private outputChannel: LogOutputChannel
+    private template : LogMessageTemplate
 
-        const index = parseInt(indexStr[0])
-        seen.add(index);
+    private methods = new Map<LogLevel, (...args: any[]) => void>
 
-        return args[index];
-    });
-
-    let suffix = ""
-    for (let i = 0; i < args.length; ++i) {
-        if (seen.has(i))
-            continue
-
-        if (suffix != "")
-            suffix += ", "
-        suffix += String(args[i])
-    }
-
-    if (suffix)
-        suffix = " [" + suffix + "]"
-
-    return text + suffix;
-}
-
-export class VscodeLogger implements Logger
-{
-    private outputChannel: OutputChannel
-
-    constructor(outputChannel: OutputChannel)
+    constructor(outputChannel: LogOutputChannel, template ?: string)
     {
         this.outputChannel = outputChannel
+        this.template = logSystem.parseLogTemplate(template ?? "%n: %m")
+
+        this.methods = new Map<LogLevel, (...args: any[]) => void>(
+            [
+                [LogLevel.OUTPUT, this.outputChannel.appendLine],
+                [LogLevel.FATAL, this.outputChannel.error],
+                [LogLevel.ERROR, this.outputChannel.error],
+                [LogLevel.WARN, this.outputChannel.warn],
+                [LogLevel.INFO, this.outputChannel.info],
+                [LogLevel.DEBUG, this.outputChannel.debug],
+            ]
+        )
     }
 
-    info(msg: string, position?: FilePosition): void
-    {
-        this.outputChannel.appendLine('[INF]: ' + msg);
+    write(event: LogEvent): void {
+        const str = logSystem.renderEvent(event, this.template);
+        // this.outputChannel.appendLine(str);
+        const method = (this.methods.get(event.level) ?? this.outputChannel.info).bind(this.outputChannel)
+        method(str, ...event.properties._ ?? []);
     }
 
-    warn(msg: string, position?: FilePosition): void
-    {
-        this.outputChannel.appendLine('[WRN]: ' + msg);
-    }
-
-    error(msg: string, ...args: any[]): void
-    {
-        this.outputChannel.appendLine('[ERR]: ' + formatMessage(msg, args));
-        this.outputChannel.show(true)
-    }
-
-    debug(msg: string, position?: FilePosition): void
-    {
-        this.outputChannel.appendLine('[DBG]: ' + msg);
-        this.outputChannel.show(true)
+    flush(): void {
     }
 }

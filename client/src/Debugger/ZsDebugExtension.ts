@@ -44,7 +44,7 @@ class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
 
 export function zsDebugInit(context: vscode.ExtensionContext, fileAccessor: FileAccessor)
 {
-	console.log("Activate zs debugger");
+	console.log("Activate zscript debugger");
     // register a configuration provider
 	const provider = new DebugConfigurationProvider();
 	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('zs', provider));

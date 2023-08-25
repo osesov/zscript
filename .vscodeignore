@@ -5,10 +5,19 @@ debug/
 orig/
 !out/zscript.js
 !out/zscript.js.map
-out/
+# out/
 src/
 
 .gitignore
 .gitattributes
 vsc-extension-quickstart.md
 *.vsix
+
+client/
+server/
+zslib/
+node_modules
+.local/
+build.js
+debug.md
+tsconfig.json

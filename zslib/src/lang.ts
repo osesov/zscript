@@ -1,3 +1,4 @@
+import { logSystem } from "./logger"
 import { FileRange } from "./zscript-parse"
 
 export enum ContextTag
@@ -6,6 +7,7 @@ export enum ContextTag
     INTERFACE,
     CLASS,
     METHOD,
+    FUNCTION
 }
 
 export interface Position
@@ -13,6 +15,8 @@ export interface Position
     line: number
     column: number // TAB is a single character
 }
+
+type Type = string[]
 
 export interface Include
 {
@@ -23,36 +27,47 @@ export interface Include
 export interface NameAndType
 {
     name: string
-    type: string
+    type: Type
 }
 
 export interface ClassVariable extends NameAndType
 {
-    position: Position
-}
-
-export interface Common
-{
-    context: ContextTag
+    begin: Position
+    end: Position
+    docBlock: string[]
 }
 
 export interface ClassMethodVariable extends NameAndType
 {
-    position: Position
+    begin: Position
+    end: Position
     docBlock: string[]
 }
 
-export interface ClassMethodInfo extends NameAndType, Common
+export interface MethodArgument
+{
+    type: Type
+    name: string
+    begin: Position
+    end: Position
+}
+
+export interface WithContext
+{
+    context: ContextTag
+}
+export interface ClassMethodInfo extends WithContext, NameAndType
 {
     context: ContextTag.METHOD
     begin: Position
     end: Position
     visibility: string
-    args: NameAndType[]
+    args: MethodArgument[]
     variables: ClassMethodVariable[]
+    docBlock: string[]
 }
 
-export interface ClassInfo extends Common
+export interface ClassInfo extends WithContext
 {
     context: ContextTag.CLASS
     name: string
@@ -65,23 +80,27 @@ export interface ClassInfo extends Common
 
 export interface TypeInfo extends NameAndType
 {
-    position: Position
+    begin: Position
+    end: Position
+    docBlock: string[]
 }
 
 export interface InterfaceMethod extends NameAndType
 {
     docBlock: string[]
-    position: Position
+    begin: Position
+    end: Position
     args: NameAndType[]
 }
 
 export interface InterfaceProperty extends NameAndType
 {
-    position: Position
+    begin: Position
+    end: Position
     docBlock: string[]
 }
 
-export interface InterfaceInfo
+export interface InterfaceInfo extends WithContext
 {
     context: ContextTag.INTERFACE
     name: string
@@ -96,11 +115,29 @@ export interface InterfaceInfo
 export interface DefineInfo
 {
     name: string
-    position: Position,
+    begin: Position,
+    end: Position,
     docBlock: string[]
 }
 
-export type Span = ClassInfo | InterfaceInfo | ClassMethodInfo
+export interface GlobalVariable extends NameAndType
+{
+    begin: Position
+    end: Position
+    docBlock: string[]
+}
+
+export interface GlobalFunction extends WithContext, NameAndType
+{
+    context: ContextTag.FUNCTION
+    begin: Position
+    end: Position
+    args: MethodArgument[]
+    variables: ClassMethodVariable[]
+    docBlock: string[]
+}
+
+export type Span = ClassInfo | InterfaceInfo | ClassMethodInfo | GlobalFunction
 
 export class UnitInfo
 {
@@ -123,7 +160,15 @@ export class UnitInfo
     } = {}
 
     public readonly define: {
-        [name: string]: DefineInfo
+        [name: string]: DefineInfo[]
+    } = {}
+
+    public readonly globalVariables: {
+        [name: string]: GlobalVariable
+    } = {}
+
+    public readonly globalFunctions: {
+        [name: string]: GlobalFunction
     } = {}
 
     // temporal state
@@ -164,7 +209,6 @@ export class UnitInfo
         this.class[name] = classInfo
         this.stack.push(classInfo)
         this.span.push(classInfo)
-        console.log('CLASS', name)
     }
 
     public beginInterface(name: string, inherit: string, location: FileRange)
@@ -183,51 +227,53 @@ export class UnitInfo
         this.interface[name] = classInfo
         this.stack.push(classInfo)
         this.span.push(classInfo)
-        console.log('INTERFACE', name)
     }
 
-    public addInterfaceMethod(type: string, name: string, args: any, location: FileRange, docBlock: string[])
+    public addInterfaceMethod(type: Type, name: string, args: [Type,string][], location: FileRange, docBlock: string[])
     {
         const m = this.getCurrentInterface()
 
         const info : InterfaceMethod = {
             name: name,
             type: type,
-            position: location.start,
-            args: args,
+            begin: location.start,
+            end: location.end,
+            args: args.map(e => ({ type: e[0], name: e[1]})),
             docBlock: docBlock
         }
         m.methods.push(info)
     }
 
-    public addReadProperty(type: string, name: string, location: FileRange, docBlock: string[])
+    public addReadProperty(type: Type, name: string, location: FileRange, docBlock: string[])
     {
         const m = this.getCurrentInterface()
 
         const info : InterfaceProperty = {
             name: name,
             type: type,
-            position: location.start,
+            begin: location.start,
+            end: location.end,
             docBlock: docBlock
         }
         m.readProp.push(info)
     }
 
-    public addWriteProperty(type: string, name: string, location: FileRange, docBlock: string[])
+    public addWriteProperty(type: Type, name: string, location: FileRange, docBlock: string[])
     {
         const m = this.getCurrentInterface()
 
         const info : InterfaceProperty = {
             name: name,
             type: type,
-            position: location.start,
+            begin: location.start,
+            end: location.end,
             docBlock: docBlock
         }
         m.writeProp.push(info)
     }
 
 
-    public beginClassMethod(visibility: string, type: string, name: string, args: NameAndType[], location: FileRange, docBlock: string[])
+    public beginClassMethod(visibility: string, type: Type, name: string, args: [Type,string,FileRange][], location: FileRange, docBlock: string[])
     {
         const currentClass: ClassInfo = this.getCurrentClass()
         const methodInfo: ClassMethodInfo = {
@@ -237,79 +283,134 @@ export class UnitInfo
             name: name,
             type: type,
             visibility: visibility,
-            args: args,
-            variables: []
+            args: args.map( e=> ({
+                type: e[0],
+                name: e[1],
+                begin: e[2].start,
+                end: e[2].end
+            })),
+            variables: [],
+            docBlock: docBlock
         }
 
         currentClass.methods.push(methodInfo)
         this.stack.push(methodInfo)
         this.span.push(methodInfo)
-
-        console.log('CLASS METHOD', name)
     }
 
-    public addMethodVariable(type: string, name: string, location: FileRange, docBlock: string[])
+    public addMethodVariables(type: Type, names: [string, FileRange][], location: FileRange, docBlock: string[])
     {
-        const current: ClassMethodInfo = this.getCurrentMethod()
-        const info: ClassMethodVariable = {
-            position: location.start,
+        const current = this.getCurrentContext() == ContextTag.METHOD ? this.getCurrentMethod(location) : this.getCurrentFunction(location)
+
+        for (const [name, location] of names) {
+            const info: ClassMethodVariable = {
+                begin: location.start,
+                end: location.end,
+                name: name,
+                type: type,
+                docBlock: docBlock
+            }
+
+            current.variables.push(info)
+        }
+    }
+
+    public addClassVariable(type: Type, name: string, location: FileRange, docBlock: string[])
+    {
+        const currentClass: ClassInfo = this.getCurrentClass()
+        const info: ClassVariable = {
+            begin: location.start,
+            end: location.end,
             name: name,
             type: type,
             docBlock: docBlock
         }
 
-        current.variables.push(info)
+        currentClass.variables.push(info)
     }
 
-    public addClassVariable(type: string, name: string, location: FileRange, docBlock: string[])
+    public addGlobalVariable(type: Type, names: [string, FileRange][], location: FileRange, docBlock: string[])
     {
-        const currentClass: ClassInfo = this.getCurrentClass()
-        const info: ClassVariable = {
-            position: location.start,
+        for (const [name, location] of names) {
+            const info: GlobalVariable = {
+                begin: location.start,
+                end: location.end,
+                name: name,
+                type: type,
+                docBlock: docBlock
+            }
+
+            this.globalVariables[name] = info
+        }
+    }
+
+    public beginGlobalFunction(type: Type, name: string, args: [Type,string,FileRange][], location: FileRange, docBlock: string[])
+    {
+        const methodInfo: GlobalFunction = {
+            context: ContextTag.FUNCTION,
+            begin: location.start,
+            end: location.end,
             name: name,
             type: type,
+            args: args.map( e=> ({
+                type: e[0],
+                name: e[1],
+                begin: e[2].start,
+                end: e[2].end
+            })),
+            variables: [],
+            docBlock: docBlock
         }
 
-        currentClass.variables.push(info)
-        console.log('CLASS VARIABLE', name)
+        this.globalFunctions[name] = methodInfo
+        this.stack.push(methodInfo)
+        this.span.push(methodInfo)
     }
 
     public addDefine(name: string, location: FileRange, docBlock: string[])
     {
-        this.define[name] = {
+        if (this.define[name] === undefined)
+            this.define[name] = []
+        this.define[name].push({
             name: name,
-            position: location.start,
+            begin: location.start,
+            end: location.end,
             docBlock: docBlock
-        }
+        })
     }
 
-    public addType(name: string, def: string, location: FileRange): void
+    public addType(name: string, def: string, location: FileRange, docBlock: string[]): void
     {
         const typeInfo: TypeInfo = {
             name: name,
-            type: def,
-            position: location.start
+            type: [def],
+            begin: location.start,
+            end: location.end,
+            docBlock: docBlock,
         }
         this.types[name] = typeInfo;
     }
 
 
-    public end(location: FileRange)
+    public end(location: FileRange): string
     {
         const top = this.stack[ this.stack.length - 1]
         if (!top)
-            return
-        console.log('END ', top.name)
+            return ""
         this.stack.pop();
         top.end = location.end
+        return top.name
+    }
+
+    public getCurrentContext(): ContextTag
+    {
+        const t = this.stack[ this.stack.length - 1];
+        return t.context ?? CurrentContext.TOP_LEVEL
     }
 
     public getCurrentClass(): ClassInfo
     {
         const t = this.stack[ this.stack.length - 1];
-
-        if (!t)
-            debugger
 
         if (t.context === ContextTag.CLASS)
             return t
@@ -327,23 +428,29 @@ export class UnitInfo
         throw Error("No current interface")
     }
 
-    public getCurrentMethod(): ClassMethodInfo
+    public getCurrentMethod(location: FileRange): ClassMethodInfo
     {
         const t = this.stack[ this.stack.length - 1];
-
-        if (!t)
-            debugger
 
         if (t.context === ContextTag.METHOD)
             return t
 
-        throw Error("No current class")
+        throw Error(`No current method: ${location.start.line}...${location.end.line}`)
+    }
+
+    public getCurrentFunction(location: FileRange): GlobalFunction
+    {
+        const t = this.stack[ this.stack.length - 1];
+
+        if (t.context === ContextTag.FUNCTION)
+            return t
+
+        throw Error(`No current function: ${location.start.line}...${location.end.line}`)
     }
 
     public getContext(position: Position): Span[]
     {
         const result: Span[] = []
-        const active: Span[] = []
 
         const inRange = (position: Position, begin: Position, end: Position): boolean => {
             if (position.line < begin.line)
@@ -378,7 +485,8 @@ export enum CurrentContext
     TOP_LEVEL = 'top-level',
     INTERFACE = 'interface',
     CLASS = 'class',
-    METHOD = 'method'
+    METHOD = 'method',
+    FUNCTION = 'function',
 }
 
 export interface ParseContext
@@ -408,6 +516,7 @@ export class ParseError extends Error
 export class ParserHelper
 {
 
+    private logger = logSystem.getLogger(ParserHelper)
     public docBlock: string[] = [];
     private currentContext: ParseContext[] = []
     private conditions: Condition[] = []
@@ -418,6 +527,7 @@ export class ParserHelper
     }
 
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     static objArrayCopy<T extends {[k:string]: any}>(data: T[]): T[]
     {
         return data.map( e => Object.assign({}, e))
@@ -432,6 +542,19 @@ export class ParserHelper
             const m = re.exec(e)
             return m![1].trim()
         })
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+    public trace(location: FileRange, msg: string, ...data: any[]): void
+    {
+        let source = location.source;
+        const prefix = '@../../../valhalla.tmnl/components/powerup/script/MEDIAFIRST/start/scripts/'
+
+        if (source.startsWith(prefix))
+            source = source.substring(prefix.length)
+
+        const position = `${source}:${location.start.line}:${location.start.column}..${location.end.line}:${location.end.column}: `
+        this.logger.debug(position + msg, ...data)
     }
 
     isTopLevel(): boolean
@@ -457,6 +580,12 @@ export class ParserHelper
             && this.currentContext[this.currentContext.length-1].in === CurrentContext.METHOD
     }
 
+    isFunction(): boolean
+    {
+        return this.currentContext.length > 0
+            && this.currentContext[this.currentContext.length-1].in === CurrentContext.FUNCTION
+    }
+
     saveContext() : ParseContext[]
     {
         return ParserHelper.objArrayCopy(this.currentContext)
@@ -475,18 +604,18 @@ export class ParserHelper
             : this.currentContext[this.currentContext.length - 1]
     }
 
-    beginContext(inContext: CurrentContext, name: string, depth ?: number ): void
+    beginContext(inContext: CurrentContext, name: string, location: FileRange, depth ?: number ): void
     {
-        console.log(`Enter context ${inContext} ${name}`)
+        this.trace(location, `Enter context ${inContext} ${name}`)
         this.currentContext.push({
             in: inContext, name: name, depth: depth ?? 0
         })
     }
 
-    endContext(): void
+    endContext(location: FileRange): void
     {
         const context = this.topContext()
-        console.log(`Leave context ${context.in} ${context.name}`)
+        this.trace(location, `Leave context ${context.in} ${context.name}`)
         this.currentContext.pop()
     }
 
@@ -507,7 +636,7 @@ export class ParserHelper
             minDepth: Number.MAX_VALUE
         })
 
-        console.log(`${location.source}:${location.start.line}:${location.start.column}: BEGIN COND`);
+        this.trace(location, `${location.source}:${location.start.line}:${location.start.column}: BEGIN COND`);
     }
 
     restartCondition(location: FileRange): void
@@ -522,7 +651,7 @@ export class ParserHelper
         }
         condition.depth = 0;
         this.restoreContext(condition.context)
-        console.log(`${location.source}:${location.start.line}:${location.start.column}: RESTART COND`);
+        this.trace(location, `${location.source}:${location.start.line}:${location.start.column}: RESTART COND`);
     }
 
     endCondition(location: FileRange): void
@@ -538,7 +667,7 @@ export class ParserHelper
 
         this.restoreContext(condition.selectedContext)
         this.conditions.pop();
-        console.log(`${location.source}:${location.start.line}:${location.start.column}: END COND`);
+        this.trace(location, `${location.source}:${location.start.line}:${location.start.column}: END COND`);
     }
 
     openCurly(): void
@@ -552,18 +681,39 @@ export class ParserHelper
         }
     }
 
-    closeCurly(unitInfo: UnitInfo, location: FileRange): void
+    closeCurly(unitInfo: UnitInfo, location: FileRange): string
     {
         const context = this.topContext();
         const condition = this.topCondition();
+        let result = ""
 
         if (--context.depth === 0) {
-            this.endContext();
-            unitInfo.end(location)
+            this.endContext(location);
+            result = unitInfo.end(location)
         }
 
         if (condition && condition.depth > 0)
             condition.depth--
+
+        return result
+    }
+
+    //
+    // using that is really time consuming - it take an order longer to match input
+    //
+    static beginOfStatement(input: string, range: {source:string, start: number, end: number}): boolean
+    {
+        // look backward for any of "{};(", skip spaces and comments
+
+        // match
+        // require: [;{}(],
+        // then possibly zero sequence of
+        // - block comment: /* ... */
+        // - line comment: // ... \n
+        // - space or newline
+        // require: end of buffer
+        const re = /[;{}(](\/\*(((?!\*\/).)*)[*]\/|\/\/[^\n]*[\n]|[ \r\n\t])*$/
+        return re.test(input.substring(0, range.start))
     }
 
 }

@@ -3,12 +3,23 @@ const fs = require("fs");
 const esbuild = require("esbuild");
 const peggy = require("peggy");
 const tspegjs = require("ts-pegjs")
+const yargs = require("yargs/yargs")
+const yargsHelpers = require("yargs/helpers")
 
 /** @type{esbuild.LogLevel} */
 const logLevel = 'info'
 let concurrentBuilds = 0;
 let completedAt = 0
+let mode = 'build'
 
+yargs(yargsHelpers.hideBin(process.argv))
+.command("build", "build app", () => mode = 'build')
+.command("watch", "watch mode", () => mode = 'watch')
+.option("verbose", { alias: 'v', type: 'boolean', description: 'Verbose Op'})
+.parse()
+
+
+console.log("Mode: ", mode)
 /** @type{esbuild.Plugin} logger */
 const logger = {
     name: 'logger',
@@ -124,6 +135,15 @@ const parser = {
     ...common,
     entryPoints: [ path.resolve("server", "src", "zs.pegjs")]
 }
-esbuild.context(server)
-esbuild.context(extension).then(ctx => ctx.watch())
-esbuild.context(server).then(ctx => ctx.watch() )
+
+switch(mode) {
+    case 'build':
+        esbuild.build(extension)
+        esbuild.build(server)
+        break
+
+    case 'watch':
+        esbuild.context(extension).then(ctx => ctx.watch())
+        esbuild.context(server).then(ctx => ctx.watch())
+        break
+}

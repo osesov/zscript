@@ -11,11 +11,10 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { ZsRepository, createRepository } from '../../zslib/src/zsRepository'
+import { createRepository } from '../../zslib/src/zsRepository'
 
 // import { UnitInfo } from './lang';
-import * as fs from 'fs'
-import * as path from 'path'
+import { ConsoleSink } from '../../zslib/src/logger';
 
 // Creates the LSP connection
 const connection = createConnection(ProposedFeatures.all);
@@ -23,7 +22,8 @@ const connection = createConnection(ProposedFeatures.all);
 // Create a manager for open text documents
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const includeDirs: string[] = []
-const repo = createRepository({includeDirs: includeDirs})
+const logger = new ConsoleSink
+const repo = createRepository({includeDirs: includeDirs}, logger)
 
 // The workspace folder this server is operating on
 let workspaceFolder: string | null;
@@ -32,13 +32,14 @@ let workspaceFolder: string | null;
 documents.onDidOpen((event) => {
 	connection.console.log(`[Server(${process.pid}) ${workspaceFolder}] Document opened: ${event.document.uri}`);
 	const text = event.document.getText()
-	repo.updateFileInfo(event.document.uri, text)
+	// repo.onDocumentOpen(event.document)
+	// repo.updateFileInfo(event.document.uri, text)
 });
 
 documents.onDidChangeContent((event) => {
 	connection.console.log(`[Server(${process.pid}) ${workspaceFolder}] Document changed: ${event.document.uri}`);
 	const text = event.document.getText()
-	repo.updateFileInfo(event.document.uri, text)
+	// repo.updateFileInfo(event.document.uri, text)
 })
 
 documents.onDidClose((event) => {

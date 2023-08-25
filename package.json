@@ -7,10 +7,10 @@
         "name": "Oleg Sesov",
         "email": "oleg.sesov@orioninc.com"
     },
-    "publisher": "Oleg Sesov",
-    "version": "1.0.3",
+    "publisher": "osesov",
+    "version": "1.0.4",
     "engines": {
-        "vscode": "^1.80.0"
+        "vscode": "^1.81.0"
     },
     "main": "./out/zscript.js",
     "categories": [
@@ -81,6 +81,16 @@
                     },
                     "default": [],
                     "description": "Set of dirs to use as include roots"
+                },
+                "zscript.stripPathPrefix": {
+                    "scope": "window",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "file"
+                    },
+                    "default": [],
+                    "description": "Set of path prefixes to strip from log output"
                 }
             }
         },
@@ -294,37 +304,42 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run esbuild-base -- --minify",
-        "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/zscript.js --external:vscode --format=cjs --platform=node",
+        "//vscode:prepublish": "npm run esbuild-base -- --minify",
+        "esbuild-base": "esbuild ./client/src/extension.ts --bundle --outfile=out/zscript.js --external:vscode --format=cjs --platform=node",
         "esbuild": "npm run esbuild-base -- --sourcemap",
         "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
         "test-compile": "tsc -p ./",
+        "vscode:prepublish": "node build.js",
         "package": "vsce package",
         "up": "npm run package && code --install-extension ./zscript-${npm_package_version}.vsix",
         "postinstall": "cd server && npm install && cd ..",
         "server-watch": "cd server && npm run watch",
-        "watch": "node ./build.js"
+        "watch": "node ./build.js watch"
     },
     "repository": {
         "type": "git",
         "url": "git@github.com:osesov/zscript.git"
     },
     "devDependencies": {
-        "@types/node": "^20.5.1",
+        "@types/node": "^20.5.4",
+        "@types/strftime": "^0.9.4",
         "@types/vscode": "^1.81.0",
+        "@typescript-eslint/eslint-plugin": "^6.4.1",
+        "@typescript-eslint/parser": "^6.4.1",
         "@vscode/debugadapter": "^1.61.0",
         "esbuild": "^0.19.2",
         "eslint": "^8.47.0",
-        "npm-check-updates": "^16.12.2",
+        "npm-check-updates": "^16.13.1",
         "npm-run-all": "^4.1.5",
         "peggy": "^3.0.2",
         "ts-pegjs": "^4.2.1",
         "vsce": "^2.15.0",
-        "vscode-languageclient": "^8.1.0"
+        "vscode-languageclient": "^8.1.0",
+        "yargs": "^17.7.2"
     },
     "dependencies": {
+        "strftime": "^0.10.2",
         "tiny-typed-emitter": "^2.1.0",
-        "tree-kill": "^1.2.2",
-        "zslib": "file:lib"
+        "tree-kill": "^1.2.2"
     }
 }

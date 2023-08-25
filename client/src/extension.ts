@@ -5,8 +5,8 @@ import { window as Window } from 'vscode';
 import { FileAccessor } from './Debugger/ZsDebugAdapter';
 import { zsDebugInit } from './Debugger/ZsDebugExtension';
 import { zsLanguageService } from './LanguageServer/zsLanguageService';
-import { VscodeLogger } from './VscodeLogger';
-import { languageId } from './common';
+import { VSCodeSink } from './VscodeLogger';
+import { ConsoleSink, LogLevel, logSystem } from '../../zslib/src/logger';
 
 function pathToUri(path: string) {
 	try {
@@ -36,10 +36,13 @@ export const workspaceFileAccessor: FileAccessor = {
 
 export function activate(context: vscode.ExtensionContext)
 {
-	const outputChannel: vscode.OutputChannel = Window.createOutputChannel('Zodiac Script', languageId);
-	const logger = new VscodeLogger(outputChannel)
+	console.log("Activate zscript extension")
+	const outputChannel: vscode.LogOutputChannel = Window.createOutputChannel('Zodiac Script', { log: true });
+	logSystem.addSink(new VSCodeSink(outputChannel))
+	logSystem.addSink(new ConsoleSink())
+	// logSystem.setLevel(LogLevel.DEBUG)
 
-    context.subscriptions.push(vscode.commands.registerCommand('extension.zscript.getProgramName', config => {
+	context.subscriptions.push(vscode.commands.registerCommand('extension.zscript.getProgramName', config => {
 		return vscode.window.showInputBox({
 			placeHolder: "Please enter the name of a file in the workspace folder",
 			value: "main.zs"
@@ -47,9 +50,8 @@ export function activate(context: vscode.ExtensionContext)
 	}));
 
 	context.subscriptions.push(outputChannel);
-
 	zsDebugInit(context, workspaceFileAccessor);
-	zsLanguageService.start(context, logger);
+	zsLanguageService.start(context);
 }
 
 export function deactivate() : Thenable<void> | undefined
