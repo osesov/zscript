@@ -39,3 +39,29 @@ This extension contributes the following settings:
 
 - [Writing a TextMate Grammar: Some Lessons Learned](https://www.apeth.com/nonblog/stories/textmatebundle.html)
 - [TextMate language grammars](https://macromates.com/manual/en/language_grammars)
+
+## TODO
+
+- real LSP
+- save indexing to disk
+- Entities:
+  - [x] interface
+  - [x] class
+  - [x] type
+  - [x] this
+  - [x] global functions
+  - [x] global variables
+  - [x] member function
+  - [x] member variables
+  - [x] local functions
+  - [ ] namespace
+  - [ ] event
+  - [ ] final
+  - [ ] abstract
+  - [ ] static
+  - [ ] enum
+  - [ ] struct
+  - [ ] implements LIST
+  - [ ] extends LIST
+  - [ ] extern
+  - [ ] native

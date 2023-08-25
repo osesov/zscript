@@ -71,7 +71,8 @@ export interface ClassInfo extends WithContext
 {
     context: ContextTag.CLASS
     name: string
-    implements: string
+    implements: string[]
+    extends: string[]
     begin: Position
     end: Position
     methods: ClassMethodInfo[]
@@ -104,7 +105,7 @@ export interface InterfaceInfo extends WithContext
 {
     context: ContextTag.INTERFACE
     name: string
-    inherit: string
+    inherit: string[]
     begin: Position
     end: Position
     methods: InterfaceMethod[]
@@ -194,12 +195,13 @@ export class UnitInfo
         })
     }
 
-    public beginClass(name: string, impl: string, location: FileRange)
+    public beginClass(name: string, impl: string[], ext: [], location: FileRange)
     {
         const classInfo: ClassInfo = {
             context: ContextTag.CLASS,
             name: name,
             implements: impl,
+            extends: ext,
             begin: location.start,
             end: location.end,
             methods: [],
@@ -211,7 +213,7 @@ export class UnitInfo
         this.span.push(classInfo)
     }
 
-    public beginInterface(name: string, inherit: string, location: FileRange)
+    public beginInterface(name: string, inherit: string[], location: FileRange)
     {
         const classInfo: InterfaceInfo = {
             context: ContextTag.INTERFACE,

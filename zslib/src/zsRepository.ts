@@ -7,7 +7,7 @@ import './zscript.pegjs'
 import * as parser from './zscript-parse'
 import { Logger, logSystem } from './logger'
 import * as vscode from 'vscode'
-import { assertUnreachable } from './util'
+import { assertUnreachable, getPromise } from './util'
 import { toVscode } from './vscodeUtil'
 
 export interface ZsEnvironment
@@ -309,7 +309,7 @@ export class ZsRepository
         return result;
     }
 
-    private async updateFileInfoSafe(fileName: string, text: string, unit: FileState, token: vscode.CancellationToken): Promise<UnitInfo|undefined>
+    private async updateFileInfoSafe(fileName: string, text: string, unit: FileState): Promise<UnitInfo|undefined>
     {
         try {
             const result: UnitInfo = parser.parse(text, {
@@ -368,13 +368,12 @@ export class ZsRepository
 
                     switch (e.context) {
                     case ContextTag.CLASS:
-                        if (e.implements && !loaded.has(e.implements))
-                            looking.add(e.implements)
+                        e.implements.forEach( p => loaded.has(p) || looking.add(p))
+                        e.extends.forEach( p => loaded.has(p) || looking.add(p))
                         break
 
                     case ContextTag.INTERFACE:
-                        if (e.inherit && !loaded.has(e.inherit))
-                            looking.add(e.inherit)
+                        e.inherit.forEach( p => loaded.has(p) || looking.add(p))
                         break
                     }
                 }
@@ -710,8 +709,7 @@ export class ZsRepository
     private async loadFileSafe(fileName: string, unit: FileState)
     {
         const text = await this.getDocumentText(fileName);
-        const token = new vscode.CancellationTokenSource
-        await this.updateFileInfoSafe(fileName, text, unit, token.token);
+        await this.updateFileInfoSafe(fileName, text, unit);
     }
 
     private doLoading()
@@ -774,12 +772,7 @@ export class ZsRepository
 
     private ensureFileLoaded(fileName: string, update: boolean): Promise<UnitInfo|undefined>
     {
-        let resolve!: (e: UnitInfo|undefined) => void, reject: (e: any) => void;
-
-        const promise = new Promise<UnitInfo|undefined>((resolve_, reject_) => {
-            resolve = resolve_
-            reject = reject_;
-        })
+        const { promise, resolve } = getPromise<UnitInfo|undefined>()
 
         const fullName = this.findInclude(fileName);
         if (!fullName) {

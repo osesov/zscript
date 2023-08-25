@@ -123,8 +123,11 @@ Function
             unitInfo.beginGlobalFunction(type, name, args, location(), helper.docBlock)
         }
 
+IdList
+    = @IdentToken |1.., _ "," _|
+
 InterfaceDeclaration
-    = InterfaceToken _ name:IdentToken inherit:( _ ":" _ @IdentToken)? _ &('{')
+    = InterfaceToken _ name:IdentToken inherit:( _ ":" _ @IdList)? _ &('{')
         {
             helper.trace(location(), 'INTERFACE', name)
             helper.beginContext(CurrentContext.INTERFACE, name, location())
@@ -178,11 +181,11 @@ TypeDeclaration
         }
 
 ClassDeclaration
-    = ClassToken _ name:IdentToken _ impl:("implements" _ @IdentToken) _ &('{')
+    = ClassToken _ name:IdentToken _ impl:("implements" _ @IdList) ext:("extends" _ @IdList) _ &('{')
         {
-            helper.trace(location(), `class ${name}, impl ${impl}`)
+            helper.trace(location(), `class ${name}, impl ${impl}, ext:${ext}`)
             helper.beginContext(CurrentContext.CLASS, name, location())
-            unitInfo.beginClass(name, impl, location(), helper.docBlock)
+            unitInfo.beginClass(name, impl, ext, location(), helper.docBlock)
         }
 
     / ClassToken _ name:IdentToken _ ';'
@@ -218,7 +221,9 @@ Type
 
 CustomType
     = (@"ptr" _ @IdentToken)
+    / (@"shared" _ @IdentChar)
     / (@"this" _ @IdentToken)
+    / (m:"const" _ t:Type) { return [m, ...t] }
     / n:IdentToken { return [n]}
 
 PrimitiveType
@@ -276,24 +281,43 @@ IdentChar
     = [_a-zA-Z0-9]
 
 Keyword
-    = "return"      !IdentChar
-    / "break"       !IdentChar
-    / "continue"    !IdentChar
-    / "for"         !IdentChar
+    = "_"           !IdentChar
+    / "namespace"   !IdentChar
+    / "event"       !IdentChar
+    / "ptr"         !IdentChar
+    / "shared"      !IdentChar
+    / "final"       !IdentChar
+    / "abstract"    !IdentChar
+    / "static"      !IdentChar
+    / "const"       !IdentChar
     / "if"          !IdentChar
+    / "else"        !IdentChar
+    / "while"       !IdentChar
+    / "do"          !IdentChar
+    / "break"       !IdentChar
+	/ "continue"    !IdentChar
+    / "return"      !IdentChar
+    / "for"         !IdentChar
+    / "true"        !IdentChar
+    / "false"       !IdentChar
+    / "null"        !IdentChar
+	/ "enum"        !IdentChar
     / "interface"   !IdentChar
     / "class"       !IdentChar
-    / "const"       !IdentChar
-    / "mod"         !IdentChar
-    / "shl"         !IdentChar
-    / "shr"         !IdentChar
-    / "or"          !IdentChar
-    / "and"         !IdentChar
-    / "xor"         !IdentChar
+    / "struct"      !IdentChar
+    / "type"        !IdentChar
+    / "this"        !IdentChar
+    / "extends"     !IdentChar
+	/ "implements"  !IdentChar
+    / "switch"      !IdentChar
     / "as"          !IdentChar
+    / "and"         !IdentChar
+    / "or"          !IdentChar
+    / "xor"         !IdentChar
     / "not"         !IdentChar
-    / "_"           !IdentChar
-    / "ptr"         !IdentChar
+	/ "extern"      !IdentChar
+    / "mod"         !IdentChar
+    / "native"      !IdentChar
 
 Operator
     = "+=" / "-=" / "*=" / "/=" / "%=" / "^=" / "&=" / ">>=" / "<<=" / "&&=" / "||="
