@@ -1,4 +1,4 @@
-import { ClassInfo, ClassMethodInfo, ContextTag, GlobalFunction, InterfaceInfo, Position, UnitInfo } from './lang'
+import { ClassInfo, ContextTag, InterfaceInfo, UnitInfo } from './lang'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -6,9 +6,7 @@ import * as path from 'path'
 import './zscript.pegjs'
 import * as parser from './zscript-parse'
 import { Logger, logSystem } from './logger'
-import * as vscode from 'vscode'
 import { assertUnreachable, getPromise } from './util'
-import { toVscode } from './vscodeUtil'
 
 export interface ZsEnvironment
 {
@@ -101,9 +99,19 @@ interface FileState
     unitInfo: UnitInfo | undefined
     ready: Promise<UnitInfo| undefined>
     resolve: (e: UnitInfo| undefined) => void
-    // TODO: curently this causes delay when updateHappen and the file is requested.
+    // TODO: currently this causes delay when updateHappen and the file is requested.
     // Should be able to break through
     updateTime: number
+}
+
+export interface FileAccessor
+{
+    getDocumentText(fileName: string): Promise<string>
+}
+
+export interface TextDocument
+{
+    fileName: string
 }
 
 export class ZsRepository
@@ -113,11 +121,13 @@ export class ZsRepository
     private logger: Logger
     private loadingQueue = new Queue
     private loading = false
-    private updateDelay = 1000
+    private updateDelay = 10000
+    private fileAccessor: FileAccessor
 
-    constructor(env: ZsEnvironment)
+    constructor(env: ZsEnvironment, fileAccessor: FileAccessor)
     {
         this.env = env
+        this.fileAccessor = fileAccessor
         this.logger = logSystem.getLogger(ZsRepository);
     }
 
@@ -151,164 +161,12 @@ export class ZsRepository
         return path
     }
 
-    // todo: class/interface completions should take inheritance into account
-    private getClassCompletions(prefix: string, classInfo: ClassInfo, token: vscode.CancellationToken): vscode.CompletionItem[]
+    public dispose(): void
     {
-        const result: vscode.CompletionItem[] = []
-
-        for (const e of classInfo.methods) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e.name, vscode.CompletionItemKind.Method))
-        }
-
-        for (const e of classInfo.variables) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e.name, vscode.CompletionItemKind.Variable))
-        }
-
-        return result;
+        this.unitInfo.clear()
     }
 
-    private getClassMethodCompletions(prefix: string, data: ClassMethodInfo, token: vscode.CancellationToken): vscode.CompletionItem[]
-    {
-        const result: vscode.CompletionItem[] = []
-
-        for (const e of data.args) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e.name, vscode.CompletionItemKind.Variable))
-        }
-
-        for (const e of data.variables) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e.name, vscode.CompletionItemKind.Variable))
-        }
-
-        return result;
-    }
-
-    private getFunctionCompletions(prefix: string, data: GlobalFunction, token: vscode.CancellationToken): vscode.CompletionItem[]
-    {
-        const result: vscode.CompletionItem[] = []
-
-        for (const e of data.args) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e.name, vscode.CompletionItemKind.Variable))
-        }
-
-        for (const e of data.variables) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e.name, vscode.CompletionItemKind.Variable))
-        }
-
-        return result;
-    }
-
-
-    private getUnitCompletions(prefix: string, position: Position, unit: UnitInfo, token: vscode.CancellationToken): vscode.CompletionItem[]
-    {
-        const result: vscode.CompletionItem[] = []
-
-        // todo: apply token
-
-        for (const e of Object.keys(unit.class)) {
-            if (token.isCancellationRequested)
-                break
-            if (e.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e, vscode.CompletionItemKind.Class))
-        }
-
-        for (const e of Object.keys(unit.interface)) {
-            if (token.isCancellationRequested)
-                break
-            if (e.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e, vscode.CompletionItemKind.Interface))
-        }
-
-        for (const e of Object.keys(unit.define)) {
-            if (token.isCancellationRequested)
-                break
-            if (e.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e, vscode.CompletionItemKind.Constant))
-        }
-
-        for (const e of Object.keys(unit.types)) {
-            if (token.isCancellationRequested)
-                break
-            if (e.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e, vscode.CompletionItemKind.Class))
-        }
-
-        for (const e of Object.keys(unit.globalFunctions)) {
-            if (token.isCancellationRequested)
-                break;
-            if (e.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e, vscode.CompletionItemKind.Function))
-        }
-
-        for (const e of Object.keys(unit.globalVariables)) {
-            if (token.isCancellationRequested)
-                break;
-            if (e.startsWith(prefix))
-                result.push(new vscode.CompletionItem(e, vscode.CompletionItemKind.Variable))
-        }
-
-        const context = unit.getContext(position)
-        for (const it of context) {
-            switch (it.context) {
-            // default:
-            //     assertUnreachable(it.context);
-
-            case ContextTag.CLASS:
-                result.push( ... this.getClassCompletions(prefix, it, token));
-                break;
-
-            case ContextTag.METHOD:
-                result.push( ... this.getClassMethodCompletions(prefix, it, token));
-                break;
-
-            case ContextTag.FUNCTION:
-                result.push( ... this.getFunctionCompletions(prefix, it, token));
-                break;
-
-            case ContextTag.INTERFACE:
-                break;
-            }
-        }
-
-        return result;
-    }
-
-    public async getCompletions(fileName: string, prefix: string, position: Position, token: vscode.CancellationToken): Promise<vscode.CompletionItem[]>
-    {
-        const result: vscode.CompletionItem[] = []
-        const includes = await this.getIncludeQueue(fileName)
-
-        for (const unit of includes) {
-            if (token.isCancellationRequested)
-                break;
-
-            if (!unit)
-                continue;
-
-            const partial = this.getUnitCompletions(prefix, position, unit, token);
-            result.push(...partial)
-        }
-
-        return result;
-    }
-
+    // Loaders/parsers
     private async updateFileInfoSafe(fileName: string, text: string, unit: FileState): Promise<UnitInfo|undefined>
     {
         try {
@@ -342,373 +200,9 @@ export class ZsRepository
 
     }
 
-    public async getInheritance(start: ClassInfo| InterfaceInfo, fileName: string): Promise<(ClassInfo|InterfaceInfo)[]>
-    {
-        const result: (ClassInfo|InterfaceInfo)[] = []
-        const includes = await this.getIncludeQueue(fileName)
-        const looking = new Set<string>
-        const loaded = new Set<string>
-
-        looking.add(start.name);
-
-        while (looking.size > 0) {
-            let somethingChanged = false
-
-            for(const it of includes) {
-                if (looking.size === 0)
-                    break;
-                for (const name of looking) {
-                    const e = ((): (ClassInfo|InterfaceInfo|undefined) => it.interface[name] ?? it.class[name])()
-                    if (!e)
-                        break;
-                    result.push(e);
-                    looking.delete(name);
-                    loaded.add(name);
-                    somethingChanged = true
-
-                    switch (e.context) {
-                    case ContextTag.CLASS:
-                        e.implements.forEach( p => loaded.has(p) || looking.add(p))
-                        e.extends.forEach( p => loaded.has(p) || looking.add(p))
-                        break
-
-                    case ContextTag.INTERFACE:
-                        e.inherit.forEach( p => loaded.has(p) || looking.add(p))
-                        break
-                    }
-                }
-            }
-
-            if (!somethingChanged)
-                break;
-        }
-        return result;
-    }
-
-    public async getIncludeQueue(fileName: string): Promise<UnitInfo[]>
-    {
-        const queue = new Queue
-        const result: UnitInfo[] = []
-        const fullName = this.findInclude(fileName)
-        if (!fullName)
-            return result;
-
-        queue.add(fullName)
-
-        while (!queue.empty) {
-            const includeFile = queue.next()
-            if (!includeFile)
-                continue
-
-            const fullIncludeName = this.findInclude(includeFile)
-            if (!fullIncludeName)
-                continue
-
-            const unit = await this.ensureFileLoaded(fullIncludeName, false);
-            if (unit) {
-                result.push(unit)
-
-                const newIncludes = Object.keys(unit.include).map( e=> this.findInclude(e))
-                queue.add(newIncludes)
-            }
-        }
-
-        return result;
-    }
-
-    private getDefineDefinitions(fileUri: vscode.Uri, word: string, unit: UnitInfo, token: vscode.CancellationToken): vscode.LocationLink[]
-    {
-        const result: vscode.LocationLink[] = []
-
-        for (const [key, defines] of Object.entries(unit.define)) {
-            if (token.isCancellationRequested)
-                break
-            if (key !== word)
-                continue
-
-            for (const define of defines) {
-                result.push({
-                    targetUri: fileUri,
-                    targetRange: toVscode.range(define.begin, define.end)
-                })
-            }
-        }
-        return result;
-    }
-
-    private getGlobalsDefinitions(fileUri: vscode.Uri, word: string, unit: UnitInfo, token: vscode.CancellationToken): vscode.LocationLink[]
-    {
-        const result: vscode.LocationLink[] = []
-
-        for (const it of Object.entries(unit.globalFunctions)) {
-            if (token.isCancellationRequested)
-                break
-            if (it[0] !== word)
-                continue
-            result.push({
-                targetUri: fileUri,
-                targetRange: toVscode.range(it[1].begin, it[1].end)
-            })
-        }
-
-        for (const it of Object.entries(unit.globalVariables)) {
-            if (token.isCancellationRequested)
-                break
-            if (it[0] !== word)
-                continue
-            result.push({
-                targetUri: fileUri,
-                targetRange: toVscode.range(it[1].begin, it[1].end)
-            })
-        }
-        return result;
-    }
-
-    private getTypeDefinitions(fileUri: vscode.Uri, word: string, unit: UnitInfo, token: vscode.CancellationToken): vscode.LocationLink[]
-    {
-        const result: vscode.LocationLink[] = []
-
-        for (const e of Object.values(unit.class)) {
-
-            if (token.isCancellationRequested)
-                break;
-
-            if (e.name !== word)
-                continue
-
-            result.push({
-                targetUri: fileUri,
-                targetRange: toVscode.range(e.begin, e.end)
-            });
-        }
-
-        for (const e of Object.values(unit.interface)) {
-            if (token.isCancellationRequested)
-                break;
-
-            if (e.name !== word)
-                continue
-
-            result.push({
-                targetUri: fileUri,
-                targetRange: toVscode.range(e.begin, e.end)
-            });
-        }
-
-        for (const e of Object.values(unit.types)) {
-            if (token.isCancellationRequested)
-                break;
-
-            if (e.name !== word)
-                continue
-            result.push({ targetUri: fileUri, targetRange: toVscode.range(e.begin, e.begin)})
-        }
-
-        return result;
-    }
-
-    private async getInheritDefinitions(fileUri: vscode.Uri, word: string, classInfo: ClassInfo|InterfaceInfo, token: vscode.CancellationToken): Promise<vscode.LocationLink[]>
-    {
-        const result: vscode.LocationLink[] = []
-        const inherit = await this.getInheritance(classInfo, fileUri.fsPath)
-        for (const e of inherit) {
-            switch(e.context) {
-            case ContextTag.CLASS:
-                result.push(... this.getClassDefinitions(fileUri, word, e, token));
-                break
-
-            case ContextTag.INTERFACE:
-                result.push(... this.getInterfaceDefinitions(fileUri, word, e, token));
-                break;
-            }
-        }
-
-        return result;
-    }
-
-    private getClassDefinitions(fileUri: vscode.Uri, word: string, classInfo: ClassInfo, token: vscode.CancellationToken): vscode.LocationLink[]
-    {
-        const result: vscode.LocationLink[] = []
-
-        for (const e of classInfo.methods) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name === word)
-                result.push({
-                    targetUri: fileUri,
-                    targetRange: toVscode.range(e.begin, e.end)
-                })
-        }
-
-        for (const e of classInfo.variables) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name === word)
-                result.push({
-                    targetUri: fileUri,
-                    targetRange: toVscode.range(e.begin, e.end)
-                })
-        }
-
-        return result;
-    }
-
-    private getInterfaceDefinitions(fileUri: vscode.Uri, word: string, interfaceInfo: InterfaceInfo, token: vscode.CancellationToken): vscode.LocationLink[]
-    {
-        const result: vscode.LocationLink[] = []
-
-        for (const e of interfaceInfo.methods) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name === word)
-                result.push({
-                    targetUri: fileUri,
-                    targetRange: toVscode.range(e.begin, e.end)
-                })
-        }
-
-        for (const e of interfaceInfo.readProp) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name === word)
-                result.push({
-                    targetUri: fileUri,
-                    targetRange: toVscode.range(e.begin, e.end)
-                })
-        }
-
-        for (const e of interfaceInfo.writeProp) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name === word)
-                result.push({
-                    targetUri: fileUri,
-                    targetRange: toVscode.range(e.begin, e.end)
-                })
-        }
-
-        return result;
-    }
-
-    private getClassMethodDefinitions(fileUri: vscode.Uri, word: string, methodInfo: ClassMethodInfo, token: vscode.CancellationToken): vscode.LocationLink[]
-    {
-        const result: vscode.LocationLink[] = []
-
-        for (const e of methodInfo.args) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name !== word)
-                continue
-            result.push({
-                targetUri: fileUri,
-                targetRange: toVscode.range(e.begin, e.end)
-            });
-        }
-
-        for (const e of methodInfo.variables) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name !== word)
-                continue
-            result.push({
-                targetUri: fileUri,
-                targetRange: toVscode.range(e.begin, e.end)
-            })
-        }
-
-        return result;
-    }
-
-    private getGlobalFunctionDefinitions(fileUri: vscode.Uri, word: string, methodInfo: GlobalFunction, token: vscode.CancellationToken): vscode.LocationLink[]
-    {
-        const result: vscode.LocationLink[] = []
-
-        for (const e of methodInfo.args) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name !== word)
-                continue
-            result.push({
-                targetUri: fileUri,
-                targetRange: toVscode.range(e.begin, e.end)
-            });
-        }
-
-        for (const e of methodInfo.variables) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name !== word)
-                continue
-            result.push({
-                targetUri: fileUri,
-                targetRange: toVscode.range(e.begin, e.end)
-            })
-        }
-
-        return result;
-    }
-
-    public async getDefinitions(fileName: string, word: string, position: Position, token: vscode.CancellationToken): Promise<vscode.LocationLink[]>
-    {
-        const includes = await this.getIncludeQueue(fileName)
-        const result: vscode.LocationLink[] = []
-        for (const unit of includes) {
-            if (!unit)
-                continue
-
-            // TODO: this obtains 'type' definitions only
-            const fileUri = vscode.Uri.file(unit.fileName)
-            result.push(... this.getTypeDefinitions(fileUri, word, unit, token))
-            result.push(... this.getDefineDefinitions(fileUri, word, unit, token))
-            result.push(... this.getGlobalsDefinitions(fileUri, word, unit, token))
-
-            const context = unit.getContext(position)
-            for (const it of context) {
-                switch (it.context) {
-                // default:
-                //     assertUnreachable(it.context);
-
-                case ContextTag.CLASS:
-                    result.push( ... await this.getClassDefinitions(fileUri, word, it, token));
-                    result.push( ... await this.getInheritDefinitions(fileUri, word, it, token));
-                    break;
-
-                case ContextTag.METHOD:
-                    result.push( ... await this.getClassMethodDefinitions(fileUri, word, it, token));
-                    break;
-
-                case ContextTag.FUNCTION:
-                    result.push( ... await this.getGlobalFunctionDefinitions(fileUri, word, it, token));
-                    break;
-
-                case ContextTag.INTERFACE:
-                    result.push( ... await this.getInheritDefinitions(fileUri, word, it, token));
-                    break;
-                }
-            }
-
-        }
-        return result
-    }
-
-    public dispose(): void
-    {
-        this.unitInfo.clear()
-    }
-
-    private async getDocumentText(fileName: string): Promise<string>
-    {
-        for (const it of vscode.workspace.textDocuments) {
-            if (it.uri.fsPath === fileName)
-                return it.getText();
-        }
-
-        return fs.promises.readFile(fileName, 'utf-8')
-    }
-
     private async loadFileSafe(fileName: string, unit: FileState)
     {
-        const text = await this.getDocumentText(fileName);
+        const text = await this.fileAccessor.getDocumentText(fileName);
         await this.updateFileInfoSafe(fileName, text, unit);
     }
 
@@ -817,17 +311,96 @@ export class ZsRepository
         return info!.ready
     }
 
-    public onDocumentOpen(doc: vscode.TextDocument): Promise<UnitInfo|undefined>
+    // ### Find out some properties for loaded classes
+
+    // Get inheritance list given a class or interface (both extends and implements)
+    public async getInheritance(start: ClassInfo|InterfaceInfo, fileName: string): Promise<(ClassInfo|InterfaceInfo)[]>
+    {
+        const result: (ClassInfo|InterfaceInfo)[] = []
+        const includes = await this.getIncludeQueue(fileName)
+        const looking = new Set<string>
+        const loaded = new Set<string>
+
+        looking.add(start.name);
+
+        while (looking.size > 0) {
+            let somethingChanged = false
+
+            for(const it of includes) {
+                if (looking.size === 0)
+                    break;
+                for (const name of looking) {
+                    const e = ((): (ClassInfo|InterfaceInfo|undefined) => it.interface[name] ?? it.class[name])()
+                    if (!e)
+                        break;
+                    result.push(e);
+                    looking.delete(name);
+                    loaded.add(name);
+                    somethingChanged = true
+
+                    switch (e.context) {
+                    case ContextTag.CLASS:
+                        e.implements.forEach( p => loaded.has(p) || looking.add(p))
+                        e.extends.forEach( p => loaded.has(p) || looking.add(p))
+                        break
+
+                    case ContextTag.INTERFACE:
+                        e.inherit.forEach( p => loaded.has(p) || looking.add(p))
+                        break
+                    }
+                }
+            }
+
+            if (!somethingChanged)
+                break;
+        }
+        return result;
+    }
+
+    // Get list of includes, starting from given file, going width-depth
+    public async getIncludeQueue(fileName: string): Promise<UnitInfo[]>
+    {
+        const queue = new Queue
+        const result: UnitInfo[] = []
+        const fullName = this.findInclude(fileName)
+        if (!fullName)
+            return result;
+
+        queue.add(fullName)
+
+        while (!queue.empty) {
+            const includeFile = queue.next()
+            if (!includeFile)
+                continue
+
+            const fullIncludeName = this.findInclude(includeFile)
+            if (!fullIncludeName)
+                continue
+
+            const unit = await this.ensureFileLoaded(fullIncludeName, false);
+            if (unit) {
+                result.push(unit)
+
+                const newIncludes = Object.keys(unit.include).map( e=> this.findInclude(e))
+                queue.add(newIncludes)
+            }
+        }
+
+        return result;
+    }
+
+    /// document maintenance
+    public onDocumentOpen(doc: TextDocument): Promise<UnitInfo|undefined>
     {
         return this.ensureFileLoaded(doc.fileName, false);
     }
 
-    public onDocumentChange(doc: vscode.TextDocument): Promise<UnitInfo|undefined>
+    public onDocumentChange(doc: TextDocument): Promise<UnitInfo|undefined>
     {
         return this.ensureFileLoaded(doc.fileName, true)
     }
 
-    public onDocumentAccess(doc: vscode.TextDocument): Promise<UnitInfo|undefined>
+    public onDocumentAccess(doc: TextDocument): Promise<UnitInfo|undefined>
     {
         return this.ensureFileLoaded(doc.fileName, false)
     }
@@ -835,12 +408,12 @@ export class ZsRepository
 
 let repo: ZsRepository
 
-export function createRepository(env: ZsEnvironment): ZsRepository
+export function createRepository(env: ZsEnvironment, fileAccessor: FileAccessor): ZsRepository
 {
     if (repo)
         throw new Error("Repo already exists")
 
-    repo = new ZsRepository(env)
+    repo = new ZsRepository(env, fileAccessor)
 
     return repo;
 }

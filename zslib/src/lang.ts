@@ -1,5 +1,5 @@
 import { logSystem } from "./logger"
-import { FileRange } from "./zscript-parse"
+import { DocBlock, FileRange } from "./zscript-parse"
 
 export enum ContextTag
 {
@@ -195,7 +195,7 @@ export class UnitInfo
         })
     }
 
-    public beginClass(name: string, impl: string[], ext: [], location: FileRange)
+    public beginClass(name: string, impl: string[], ext: [], location: FileRange, docBlock: DocBlock)
     {
         const classInfo: ClassInfo = {
             context: ContextTag.CLASS,

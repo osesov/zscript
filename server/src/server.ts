@@ -4,14 +4,14 @@
  * ------------------------------------------------------------------------------------------ */
 
 import {
-	createConnection, TextDocuments, ProposedFeatures, TextDocumentSyncKind, CompletionItem
+	createConnection, TextDocuments, ProposedFeatures, TextDocumentSyncKind, CompletionItem, CompletionParams, DefinitionParams, Definition, DefinitionLink
 } from 'vscode-languageserver/node';
 
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { createRepository } from '../../zslib/src/zsRepository'
+import { ZsEnvironment, createRepository } from '../../zslib/src/zsRepository'
 
 // import { UnitInfo } from './lang';
 import { ConsoleSink } from '../../zslib/src/logger';
@@ -23,7 +23,11 @@ const connection = createConnection(ProposedFeatures.all);
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const includeDirs: string[] = []
 const logger = new ConsoleSink
-const repo = createRepository({includeDirs: includeDirs}, logger)
+const config: ZsEnvironment = {
+	includeDirs: [],
+	stripPathPrefix: []
+}
+const repo = createRepository(config)
 
 // The workspace folder this server is operating on
 let workspaceFolder: string | null;
@@ -32,7 +36,7 @@ let workspaceFolder: string | null;
 documents.onDidOpen((event) => {
 	connection.console.log(`[Server(${process.pid}) ${workspaceFolder}] Document opened: ${event.document.uri}`);
 	const text = event.document.getText()
-	// repo.onDocumentOpen(event.document)
+	repo.onDocumentOpen(event.document)
 	// repo.updateFileInfo(event.document.uri, text)
 });
 
@@ -63,7 +67,12 @@ connection.onInitialize((params) => {
 	};
 });
 
-connection.onCompletion((params): CompletionItem[] => {
+connection.onCompletion((params: CompletionParams): CompletionItem[] => {
+	const doc = documents.get('')
+	return []
+})
+
+connection.onDefinition((params: DefinitionParams): DefinitionLink[] => {
 	return []
 })
 

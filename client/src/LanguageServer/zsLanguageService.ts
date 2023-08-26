@@ -3,12 +3,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path'
 import { ZsCompletionProvider } from "./zsCompletionProvider";
-import { ZsEnvironment, createRepository } from '../../../zslib/src/zsRepository';
+import { FileAccessor, ZsEnvironment, createRepository } from '../../../zslib/src/zsRepository';
 import { ZsDefinitionProvider } from './ZsDefinitionProvider';
 import { languageId } from '../common';
 import { ZsDocumentMonitor } from './zsDocumentMonitor';
 import { ZsHoverProvider } from './zsHoverProvider';
 import { Logger, logSystem } from '../../../zslib/src/logger';
+import { fromVscode } from '../../../zslib/src/vscodeUtil';
 
 export namespace zsLanguageService
 {
@@ -58,8 +59,11 @@ export namespace zsLanguageService
 		console.log("Activate zscript language service");
 		const documentFilter: vscode.DocumentFilter = { language: languageId, scheme: 'file' }
 		const config = vscode.workspace.getConfiguration(languageId)
+		const fileAccessor: FileAccessor = {
+			getDocumentText: fromVscode.getDocumentText
+		}
 
-		const repo = createRepository(loadConfiguration(config, logger))
+		const repo = createRepository(loadConfiguration(config, logger), fileAccessor)
 		vscode.workspace.onDidChangeConfiguration(() => repo.updateEnvironment(loadConfiguration(config, logger)))
 		// TODO:
 		// vscode.languages.registerReferenceProvider;

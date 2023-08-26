@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
+import * as fs from 'fs'
 import { Position } from './lang'
-
 
 export namespace fromVscode
 {
@@ -10,6 +10,16 @@ export namespace fromVscode
             line: position.line + 1,
             column: position.character + 1
         }
+    }
+
+    export async function getDocumentText(fileName: string): Promise<string>
+    {
+        for (const it of vscode.workspace.textDocuments) {
+            if (it.uri.fsPath === fileName)
+                return it.getText();
+        }
+
+        return fs.promises.readFile(fileName, 'utf-8')
     }
 }
 
