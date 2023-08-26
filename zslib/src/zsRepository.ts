@@ -485,6 +485,26 @@ export class ZsRepository
         return result;
     }
 
+    public getClassByName(includes: UnitInfo[], className: string): ClassInfo | undefined
+    {
+        for (const it of includes) {
+            if (className in it.class)
+                return it.class[className]
+        }
+
+        return undefined
+    }
+
+    public getInterfaceByName(includes: UnitInfo[], ifName: string): InterfaceInfo | undefined
+    {
+        for (const it of includes) {
+            if (ifName in it.interface)
+                return it.interface[ifName]
+        }
+
+        return undefined
+    }
+
     /// document maintenance
     public onDocumentOpen(doc: TextDocument): Promise<UnitInfo|undefined>
     {

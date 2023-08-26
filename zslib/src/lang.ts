@@ -224,6 +224,11 @@ export class UnitInfo
         }
     }
 
+    // private classToJson()
+    // {
+    //     const classes = Object.keys(this.class)
+    //     const result =
+    // }
 
     static fromJson(fileName: string, obj: UnitInfoData): UnitInfo
     {

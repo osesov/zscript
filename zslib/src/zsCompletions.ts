@@ -3,7 +3,7 @@ import { CancellationToken } from "./util";
 import { ZsRepository } from "./zsRepository";
 import {CompletionItem, CompletionItemKind} from 'vscode-languageclient/node'
 
-export interface CompletionSink
+export interface ZsCompletionSink
 {
     add(label: string, kind: CompletionItemKind, options ?: CompletionItem): void;
 }
@@ -14,9 +14,10 @@ export class ZsCompletions
     {
     }
 
-    public async getCompletions(result: CompletionSink, fileName: string, prefix: string, position: Position, token: CancellationToken): Promise<void>
+    public async getCompletions(result: ZsCompletionSink, fileName: string, prefix: string, position: Position, token: CancellationToken): Promise<void>
     {
         const includes = await this.repo.getIncludeQueue(fileName)
+        let p: Position | undefined = position
 
         for (const unit of includes) {
             if (token.isCancellationRequested)
@@ -25,13 +26,14 @@ export class ZsCompletions
             if (!unit)
                 continue;
 
-            await this.getUnitCompletions(result, prefix, position, unit, token);
+            await this.getUnitCompletions(result, prefix, p, unit, token);
+            p = undefined
         }
     }
 
 
     ////
-    private getUnitCompletions(result: CompletionSink, prefix: string, position: Position, unit: UnitInfo, token: CancellationToken): void
+    private getUnitCompletions(result: ZsCompletionSink, prefix: string, position: Position|undefined, unit: UnitInfo, token: CancellationToken): void
     {
         // todo: apply token
         for (const e of Object.keys(unit.class)) {
@@ -76,6 +78,9 @@ export class ZsCompletions
                 result.add(e, CompletionItemKind.Variable)
         }
 
+        if (!position)
+            return;
+
         const context = unit.getContext(position)
         for (const it of context) {
             switch (it.context) {
@@ -102,7 +107,7 @@ export class ZsCompletions
     }
 
     // todo: class/interface completions should take inheritance into account
-    private getClassCompletions(result: CompletionSink, prefix: string, classInfo: ClassInfo, token: CancellationToken): void
+    private getClassCompletions(result: ZsCompletionSink, prefix: string, classInfo: ClassInfo, token: CancellationToken): void
     {
         for (const e of classInfo.methods) {
             if (token.isCancellationRequested)
@@ -119,7 +124,7 @@ export class ZsCompletions
         }
     }
 
-    private getInterfaceCompletions(result: CompletionSink, prefix: string, info: InterfaceInfo, token: CancellationToken): void
+    private getInterfaceCompletions(result: ZsCompletionSink, prefix: string, info: InterfaceInfo, token: CancellationToken): void
     {
         for (const e of info.methods) {
             if (token.isCancellationRequested)
@@ -143,7 +148,7 @@ export class ZsCompletions
         }
     }
 
-    private getClassMethodCompletions(result: CompletionSink, prefix: string, data: ClassMethodInfo, token: CancellationToken): void
+    private getClassMethodCompletions(result: ZsCompletionSink, prefix: string, data: ClassMethodInfo, token: CancellationToken): void
     {
         for (const e of data.args) {
             if (token.isCancellationRequested)
@@ -160,7 +165,7 @@ export class ZsCompletions
         }
     }
 
-    private getFunctionCompletions(result: CompletionSink, prefix: string, data: GlobalFunction, token: CancellationToken): void
+    private getFunctionCompletions(result: ZsCompletionSink, prefix: string, data: GlobalFunction, token: CancellationToken): void
     {
         for (const e of data.args) {
             if (token.isCancellationRequested)

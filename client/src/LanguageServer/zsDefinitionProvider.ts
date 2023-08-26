@@ -4,10 +4,10 @@ import { CancellationToken, Definition, DefinitionProvider, LocationLink, TextDo
 import { ZsRepository } from "../../../zslib/src/zsRepository";
 import { Logger, logSystem } from "../../../zslib/src/logger";
 import { fromVscode, toVscode } from "../../../zslib/src/vscodeUtil";
-import { DefinitionSink, ZsDefinitions } from "../../../zslib/src/zsDefinitions";
+import { ZsDefinitionSink, ZsDefinitions } from "../../../zslib/src/zsDefinitions";
 import { Position } from '../../../zslib/src/lang';
 
-class ZsDefinitionSink implements DefinitionSink
+class ZsDefinitionSinkImpl implements ZsDefinitionSink
 {
     public items: vscode.DefinitionLink[] = []
     private seen = new Set<string>
@@ -48,7 +48,7 @@ export class ZsDefinitionProvider implements DefinitionProvider
         this.logger.info("Query definitions for {@word} in {file}", word, this.repo.stripPathPrefix(fileName));
 
         try {
-            const result = new ZsDefinitionSink
+            const result = new ZsDefinitionSinkImpl
             const unit = await this.repo.onDocumentAccess(document);
             if (!unit)
                 return [];

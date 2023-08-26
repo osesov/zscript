@@ -4,14 +4,14 @@ import * as vscode from 'vscode';
 import * as path from 'path'
 import { ZsCompletionProvider } from "./zsCompletionProvider";
 import { FileAccessor, ZsEnvironment, createRepository } from '../../../zslib/src/zsRepository';
-import { ZsDefinitionProvider } from './ZsDefinitionProvider';
+import { ZsDefinitionProvider } from './zsDefinitionProvider';
 import { languageId } from '../common';
 import { ZsDocumentMonitor } from './zsDocumentMonitor';
-import { ZsHoverProvider } from './zsHoverProvider';
 import { Logger, logSystem } from '../../../zslib/src/logger';
 import { fromVscode } from '../../../zslib/src/vscodeUtil';
 
 import {default as subst} from 'vscode-variables'
+import { ZsHoverProvider } from './zsHoverProvider';
 
 export namespace zsLanguageService
 {
@@ -84,6 +84,7 @@ export namespace zsLanguageService
 		// context.subscriptions.push( vscode.languages.registerHoverProvider(documentFilter, new ZsHoverProvider(repo)));
 		context.subscriptions.push(vscode.languages.registerCompletionItemProvider(documentFilter, new ZsCompletionProvider(repo) ));
 		context.subscriptions.push(vscode.languages.registerDefinitionProvider(documentFilter, new ZsDefinitionProvider(repo)) )
+		context.subscriptions.push(vscode.languages.registerHoverProvider(documentFilter, new ZsHoverProvider(repo)) )
 		context.subscriptions.push(new ZsDocumentMonitor(repo, context))
 		context.subscriptions.push(repo)
 

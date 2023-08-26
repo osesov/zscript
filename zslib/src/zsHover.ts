@@ -1,0 +1,172 @@
+import { ZsRepository } from "./zsRepository";
+import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ContextTag, GlobalFunction, InterfaceInfo, InterfaceMethod, MethodArgument, Position, UnitInfo } from "./lang";
+import { CancellationToken } from "./util";
+
+export interface ZsHoverSink
+{
+    setVariable(info: ClassMethodVariable): void
+    setArgument(info: MethodArgument): void
+    setClassMethod(info: ClassMethodInfo): void
+    setInterfaceMethod(info: InterfaceMethod): void
+    setFunction(info: GlobalFunction): void
+    setClass(info: ClassInfo): void
+    setInterface(info: InterfaceInfo): void
+}
+
+export class ZsHover
+{
+    constructor(private repo: ZsRepository)
+    {
+    }
+
+    async getHover(result: ZsHoverSink, fileName: string, word: string, position: Position, _token: CancellationToken): Promise<void>
+    {
+        const includes = await this.repo.getIncludeQueue(fileName)
+        if (includes.length === 0)
+            return
+
+        const main: UnitInfo = includes[0]
+        const context = main.getContext(position).reverse()
+        const seenClass = new Set<ClassInfo>
+        const seenInterface = new Set<InterfaceInfo>
+
+        const checkMethod = (ctx: ClassMethodInfo): boolean => {
+            if (ctx.name === word) {
+                result.setClassMethod(ctx)
+                return true;
+            }
+
+            const variable = ctx.variables.find(e => e.name === word);
+            if (variable) {
+                result.setVariable(variable)
+                return true;
+            }
+
+            const arg = ctx.args.find(e => e.name === word)
+            if (arg) {
+                result.setArgument(arg);
+                return true;
+            }
+
+            return false
+        }
+
+        const checkFunction = (ctx: GlobalFunction): boolean => {
+            if (ctx.name === word) {
+                result.setFunction(ctx)
+                return true
+            }
+
+            const variable = ctx.variables.find(e => e.name === word);
+            if (variable) {
+                result.setVariable(variable)
+                return true
+            }
+
+            const arg = ctx.args.find(e => e.name === word)
+            if (arg) {
+                result.setArgument(arg);
+                return true
+            }
+            return false
+        }
+
+        const checkInterface = (ctx: InterfaceInfo): boolean => {
+            if (seenInterface.has(ctx))
+                return false
+            seenInterface.add(ctx)
+
+            if (ctx.name === word) {
+                result.setInterface(ctx)
+                return true
+            }
+
+            const readProp = ctx.readProp.find(e => e.name === word);
+            if (readProp) {
+                result.setVariable(readProp);
+                return true
+            }
+
+            const writeProp = ctx.writeProp.find(e => e.name === word);
+            if (writeProp) {
+                result.setVariable(writeProp);
+                return true
+            }
+
+            const method = ctx.methods.find( e => e.name === word)
+            if (method) {
+                result.setInterfaceMethod(method)
+                return true
+            }
+
+            for (const it of ctx.inherit) {
+                const ifInfo = this.repo.getInterfaceByName(includes, it)
+                if (ifInfo && checkInterface(ifInfo))
+                    return true;
+            }
+
+            return false;
+        }
+
+        const checkClass = (ctx: ClassInfo): boolean => {
+            if (seenClass.has(ctx))
+                return false
+            seenClass.add(ctx)
+
+            if (ctx.name === word) {
+                result.setClass(ctx)
+                return true
+            }
+
+            const variable = ctx.variables.find(e => e.name === word);
+            if (variable) {
+                result.setVariable(variable);
+                return true
+            }
+
+            const method = ctx.methods.find( e => e.name === word)
+            if (method) {
+                result.setClassMethod(method)
+                return true
+            }
+
+            for (const it of ctx.extends) {
+                const classInfo = this.repo.getClassByName(includes, it)
+                if (classInfo && checkClass(classInfo))
+                    return true;
+            }
+
+            for (const it of ctx.implements) {
+                const ifInfo = this.repo.getInterfaceByName(includes, it)
+                if (ifInfo && checkInterface(ifInfo))
+                    return true;
+            }
+
+            return false;
+        }
+
+        for (const ctx of context) {
+            switch(ctx.context) {
+            case ContextTag.METHOD:
+                if (checkMethod(ctx))
+                    return
+                break;
+
+            case ContextTag.FUNCTION:
+                if (checkFunction(ctx))
+                    return
+                break;
+
+            case ContextTag.CLASS:
+                if (checkClass(ctx))
+                    return;
+                break;
+
+            case ContextTag.INTERFACE:
+                if (checkInterface(ctx))
+                    return
+                break
+            }
+        }
+    }
+}

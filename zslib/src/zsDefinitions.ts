@@ -2,7 +2,7 @@ import { ClassInfo, ClassMethodInfo, ContextTag, GlobalFunction, InterfaceInfo, 
 import { CancellationToken } from "./util";
 import { ZsRepository } from "./zsRepository";
 
-export interface DefinitionSink
+export interface ZsDefinitionSink
 {
     add(fileName: string, start: Position, end: Position): void;
 }
@@ -13,7 +13,7 @@ export class ZsDefinitions
     {
     }
 
-    public async getDefinitions(result: DefinitionSink, initialFileName: string, word: string, position: Position, token: CancellationToken): Promise<void>
+    public async getDefinitions(result: ZsDefinitionSink, initialFileName: string, word: string, position: Position, token: CancellationToken): Promise<void>
     {
         const includes = await this.repo.getIncludeQueue(initialFileName)
         for (const unit of includes) {
@@ -53,7 +53,7 @@ export class ZsDefinitions
     }
 
     ////
-    private getTypeDefinitions(result: DefinitionSink, fileName: string, word: string, unit: UnitInfo, token: CancellationToken): void
+    private getTypeDefinitions(result: ZsDefinitionSink, fileName: string, word: string, unit: UnitInfo, token: CancellationToken): void
     {
         for (const e of Object.values(unit.class)) {
 
@@ -86,7 +86,7 @@ export class ZsDefinitions
         }
     }
 
-    private getDefineDefinitions(result: DefinitionSink, fileName: string, word: string, unit: UnitInfo, token: CancellationToken): void
+    private getDefineDefinitions(result: ZsDefinitionSink, fileName: string, word: string, unit: UnitInfo, token: CancellationToken): void
     {
         for (const [key, defines] of Object.entries(unit.define)) {
             if (token.isCancellationRequested)
@@ -100,7 +100,7 @@ export class ZsDefinitions
         }
     }
 
-    private getGlobalsDefinitions(result: DefinitionSink, fileName: string, word: string, unit: UnitInfo, token: CancellationToken): void
+    private getGlobalsDefinitions(result: ZsDefinitionSink, fileName: string, word: string, unit: UnitInfo, token: CancellationToken): void
     {
         for (const [name, desc] of Object.entries(unit.globalFunctions)) {
             if (token.isCancellationRequested)
@@ -119,7 +119,7 @@ export class ZsDefinitions
         }
     }
 
-    private getClassDefinitions(result: DefinitionSink, fileName: string, word: string, classInfo: ClassInfo, token: CancellationToken): void
+    private getClassDefinitions(result: ZsDefinitionSink, fileName: string, word: string, classInfo: ClassInfo, token: CancellationToken): void
     {
         for (const e of classInfo.methods) {
             if (token.isCancellationRequested)
@@ -136,7 +136,7 @@ export class ZsDefinitions
         }
     }
 
-    private async getInheritDefinitions(result: DefinitionSink, fileName: string, word: string, classInfo: ClassInfo|InterfaceInfo, token: CancellationToken): Promise<void>
+    private async getInheritDefinitions(result: ZsDefinitionSink, fileName: string, word: string, classInfo: ClassInfo|InterfaceInfo, token: CancellationToken): Promise<void>
     {
         const inherit = await this.repo.getInheritance(classInfo, fileName)
         for (const e of inherit) {
@@ -152,7 +152,7 @@ export class ZsDefinitions
         }
     }
 
-    private getInterfaceDefinitions(result: DefinitionSink, fileName: string, word: string, interfaceInfo: InterfaceInfo, token: CancellationToken): void
+    private getInterfaceDefinitions(result: ZsDefinitionSink, fileName: string, word: string, interfaceInfo: InterfaceInfo, token: CancellationToken): void
     {
         for (const e of interfaceInfo.methods) {
             if (token.isCancellationRequested)
@@ -176,7 +176,7 @@ export class ZsDefinitions
         }
     }
 
-    private getClassMethodDefinitions(result: DefinitionSink, fileName: string, word: string, methodInfo: ClassMethodInfo, token: CancellationToken): void
+    private getClassMethodDefinitions(result: ZsDefinitionSink, fileName: string, word: string, methodInfo: ClassMethodInfo, token: CancellationToken): void
     {
         for (const e of methodInfo.args) {
             if (token.isCancellationRequested)
@@ -195,7 +195,7 @@ export class ZsDefinitions
         }
     }
 
-    private getGlobalFunctionDefinitions(result: DefinitionSink, fileName: string, word: string, methodInfo: GlobalFunction, token: CancellationToken): void
+    private getGlobalFunctionDefinitions(result: ZsDefinitionSink, fileName: string, word: string, methodInfo: GlobalFunction, token: CancellationToken): void
     {
         for (const e of methodInfo.args) {
             if (token.isCancellationRequested)

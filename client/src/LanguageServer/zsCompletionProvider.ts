@@ -2,10 +2,10 @@ import * as vscode from 'vscode'
 import { ZsRepository } from '../../../zslib/src/zsRepository'
 import { Logger, logSystem } from '../../../zslib/src/logger';
 import { fromVscode } from '../../../zslib/src/vscodeUtil';
-import { CompletionSink, ZsCompletions } from '../../../zslib/src/zsCompletions'
+import { ZsCompletionSink, ZsCompletions } from '../../../zslib/src/zsCompletions'
 import { CompletionItemKind } from 'vscode-languageclient';
 
-class ZsCompletionSink implements CompletionSink
+class ZsCompletionSinkImpl implements ZsCompletionSink
 {
     public list: vscode.CompletionList = new vscode.CompletionList(undefined, false)
     private seen = new Set<string>
@@ -40,7 +40,7 @@ export class ZsCompletionProvider implements vscode.CompletionItemProvider
         const fileName = document.uri.fsPath
 
         try {
-            const result = new ZsCompletionSink
+            const result = new ZsCompletionSinkImpl
             await this.repo.onDocumentAccess(document);
             await this.provider.getCompletions(result, fileName, word.prefix, fromVscode.position(position), token);
             this.logger.info(`completion for ${word?.word} at ${word.offset}:
