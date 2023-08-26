@@ -131,7 +131,7 @@ InterfaceDeclaration
         {
             helper.trace(location(), 'INTERFACE', name)
             helper.beginContext(CurrentContext.INTERFACE, name, location())
-            unitInfo.beginInterface(name, inherit, location(), helper.docBlock)
+            unitInfo.beginInterface(name, inherit ?? [], location(), helper.docBlock)
         }
     / InterfaceToken _ name:IdentToken _ ';'
         {
@@ -185,7 +185,7 @@ ClassDeclaration
         {
             helper.trace(location(), `class ${name}, impl ${impl}, ext:${ext}`)
             helper.beginContext(CurrentContext.CLASS, name, location())
-            unitInfo.beginClass(name, impl, ext, location(), helper.docBlock)
+            unitInfo.beginClass(name, impl ?? [], ext ?? [], location(), helper.docBlock)
         }
 
     / ClassToken _ name:IdentToken _ ';'
@@ -223,7 +223,7 @@ CustomType
     = (@"ptr" _ @IdentToken)
     / (@"shared" _ @IdentChar)
     / (@"this" _ @IdentToken)
-    / (m:"const" _ t:Type) { return [m, ...t] }
+    / (m:"const" _ t:Type { return [m, ...t] })
     / n:IdentToken { return [n]}
 
 PrimitiveType
