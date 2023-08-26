@@ -55,7 +55,7 @@ export class ZsDefinitions
     ////
     private getTypeDefinitions(result: ZsDefinitionSink, fileName: string, word: string, unit: UnitInfo, token: CancellationToken): void
     {
-        for (const e of Object.values(unit.class)) {
+        for (const e of Object.values(unit.classes)) {
 
             if (token.isCancellationRequested)
                 break;
@@ -66,7 +66,7 @@ export class ZsDefinitions
             result.add(fileName, e.begin, e.end);
         }
 
-        for (const e of Object.values(unit.interface)) {
+        for (const e of Object.values(unit.interfaces)) {
             if (token.isCancellationRequested)
                 break;
 
@@ -88,7 +88,7 @@ export class ZsDefinitions
 
     private getDefineDefinitions(result: ZsDefinitionSink, fileName: string, word: string, unit: UnitInfo, token: CancellationToken): void
     {
-        for (const [key, defines] of Object.entries(unit.define)) {
+        for (const [key, defines] of Object.entries(unit.defines)) {
             if (token.isCancellationRequested)
                 break
             if (key !== word)

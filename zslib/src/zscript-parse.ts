@@ -582,16 +582,16 @@ return helper.isInterface()};// @ts-ignore
 return helper.isTopLevel()};// @ts-ignore
 
   var peg$f14 = function() {// @ts-ignore
-return helper.isMethod() || helper.isFunction()};// @ts-ignore
+return helper.isMethod()};// @ts-ignore
 
-  var peg$f15 = function(doc) {// @ts-ignore
- return doc };// @ts-ignore
+  var peg$f15 = function() {// @ts-ignore
+return helper.isFunction()};// @ts-ignore
 
   var peg$f16 = function(doc) {// @ts-ignore
- return [...doc] };// @ts-ignore
+ return doc };// @ts-ignore
 
-  var peg$f17 = function() {// @ts-ignore
- helper.beginCondition(location()) };// @ts-ignore
+  var peg$f17 = function(doc) {// @ts-ignore
+ return [...doc] };// @ts-ignore
 
   var peg$f18 = function() {// @ts-ignore
  helper.beginCondition(location()) };// @ts-ignore
@@ -600,28 +600,22 @@ return helper.isMethod() || helper.isFunction()};// @ts-ignore
  helper.beginCondition(location()) };// @ts-ignore
 
   var peg$f20 = function() {// @ts-ignore
- helper.restartCondition(location()) };// @ts-ignore
+ helper.beginCondition(location()) };// @ts-ignore
 
   var peg$f21 = function() {// @ts-ignore
  helper.restartCondition(location()) };// @ts-ignore
 
   var peg$f22 = function() {// @ts-ignore
+ helper.restartCondition(location()) };// @ts-ignore
+
+  var peg$f23 = function() {// @ts-ignore
  helper.endCondition(location()) };// @ts-ignore
 
-  var peg$f23 = function(name) {
+  var peg$f24 = function(name) {
 // @ts-ignore
             helper.trace(location(), 'DEFINE', name)
 // @ts-ignore
             unitInfo.addDefine(name, location(), helper.docBlock);
-        };// @ts-ignore
-
-  var peg$f24 = function(file) {
-// @ts-ignore
-            const fileName = file.join('');
-// @ts-ignore
-            helper.trace(location(), "INCLUDE", fileName)
-// @ts-ignore
-            unitInfo.addInclude(false, fileName, location())
         };// @ts-ignore
 
   var peg$f25 = function(file) {
@@ -630,20 +624,29 @@ return helper.isMethod() || helper.isFunction()};// @ts-ignore
 // @ts-ignore
             helper.trace(location(), "INCLUDE", fileName)
 // @ts-ignore
+            unitInfo.addInclude(false, fileName, location())
+        };// @ts-ignore
+
+  var peg$f26 = function(file) {
+// @ts-ignore
+            const fileName = file.join('');
+// @ts-ignore
+            helper.trace(location(), "INCLUDE", fileName)
+// @ts-ignore
             unitInfo.addInclude(true, fileName, location())
         };// @ts-ignore
 
-  var peg$f26 = function(name) {// @ts-ignore
+  var peg$f27 = function(name) {// @ts-ignore
  return [name, location()] };// @ts-ignore
 
-  var peg$f27 = function(type, vars) {
+  var peg$f28 = function(type, vars) {
 // @ts-ignore
             helper.trace(location(), `global ${vars.map(e => e[0])}, type ${type}`)
 // @ts-ignore
             unitInfo.addGlobalVariable(type, vars, location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f28 = function(type, name, args) {
+  var peg$f29 = function(type, name, args) {
 // @ts-ignore
             helper.trace(location(), 'Global method', name)
 
@@ -653,7 +656,7 @@ return helper.isMethod() || helper.isFunction()};// @ts-ignore
             unitInfo.beginGlobalFunction(type, name, args, location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f29 = function(name, inherit) {
+  var peg$f30 = function(name, inherit) {
 // @ts-ignore
             helper.trace(location(), 'INTERFACE', name)
 // @ts-ignore
@@ -662,51 +665,58 @@ return helper.isMethod() || helper.isFunction()};// @ts-ignore
             unitInfo.beginInterface(name, inherit ?? [], location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f30 = function(name) {
+  var peg$f31 = function(name) {
             // forward interface declaration
 // @ts-ignore
             helper.trace(location(), `forward interface ${name}`);
         };// @ts-ignore
 
-  var peg$f31 = function(type, name, args) {
+  var peg$f32 = function(type, name, args) {
 // @ts-ignore
             helper.trace(location(), 'Method: ', name)
 // @ts-ignore
             unitInfo.addInterfaceMethod(type, name, args, location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f32 = function(type, name) {// @ts-ignore
+  var peg$f33 = function(type, name) {// @ts-ignore
  return [type, name, location()] };// @ts-ignore
 
-  var peg$f33 = function(type, vars) {
+  var peg$f34 = function(type, vars) {
 // @ts-ignore
             helper.trace(location(), `local ${vars.map(e => e[0])}, type ${type}`)
 // @ts-ignore
             unitInfo.addMethodVariables(type, vars, location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f34 = function(type, name) {
+  var peg$f35 = function(type, vars) {
+// @ts-ignore
+            helper.trace(location(), `local ${vars.map(e => e[0])}, type ${type}`)
+// @ts-ignore
+            unitInfo.addFunctionVariables(type, vars, location(), helper.docBlock)
+        };// @ts-ignore
+
+  var peg$f36 = function(type, name) {
 // @ts-ignore
             helper.trace(location(), `PropRead ${name}, type ${type}`)
 // @ts-ignore
             unitInfo.addReadProperty(type, name, location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f35 = function(name, type) {
+  var peg$f37 = function(name, type) {
 // @ts-ignore
             helper.trace(location(), `PropWrite ${name}, type ${type}`)
 // @ts-ignore
             unitInfo.addWriteProperty(type, name, location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f36 = function(name, t) {
+  var peg$f38 = function(name, t) {
 // @ts-ignore
             helper.trace(location(), `type ${name}`)
 // @ts-ignore
             unitInfo.addType(name, t.join(''.trim()), location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f37 = function(name, impl, ext) {
+  var peg$f39 = function(name, impl, ext) {
 // @ts-ignore
             helper.trace(location(), `class ${name}, impl ${impl}, ext:${ext}`)
 // @ts-ignore
@@ -715,13 +725,13 @@ return helper.isMethod() || helper.isFunction()};// @ts-ignore
             unitInfo.beginClass(name, impl ?? [], ext ?? [], location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f38 = function(name) {
+  var peg$f40 = function(name) {
             // forward class declaration
 // @ts-ignore
             helper.trace(location(), `forward class ${name}, impl ${impl}`)
         };// @ts-ignore
 
-  var peg$f39 = function(visibility, type, name, args) {
+  var peg$f41 = function(visibility, type, name, args) {
 // @ts-ignore
             helper.trace(location(), 'CLASS METHOD', name)
 
@@ -731,29 +741,29 @@ return helper.isMethod() || helper.isFunction()};// @ts-ignore
             unitInfo.beginClassMethod(visibility, type, name, args, location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f40 = function(type, name) {
+  var peg$f42 = function(type, name) {
 // @ts-ignore
             helper.trace(location(), `variable ${name}, type ${type}`)
 // @ts-ignore
             unitInfo.addClassVariable(type, name, location(), helper.docBlock)
         };// @ts-ignore
 
-  var peg$f41 = function(n) {// @ts-ignore
- return [n]};// @ts-ignore
-
-  var peg$f42 = function(m, t) {// @ts-ignore
- return [m, t] };// @ts-ignore
-
   var peg$f43 = function(n) {// @ts-ignore
  return [n]};// @ts-ignore
 
-  var peg$f44 = function() {// @ts-ignore
+  var peg$f44 = function(m, t) {// @ts-ignore
+ return [m, t] };// @ts-ignore
+
+  var peg$f45 = function(n) {// @ts-ignore
+ return [n]};// @ts-ignore
+
+  var peg$f46 = function() {// @ts-ignore
  return ParserHelper.stripBlockComments(text())};// @ts-ignore
 
-  var peg$f45 = function() {// @ts-ignore
+  var peg$f47 = function() {// @ts-ignore
  return text().substring(2).trim() };// @ts-ignore
 
-  var peg$f46 = function(name) {// @ts-ignore
+  var peg$f48 = function(name) {// @ts-ignore
  return text().trim() };
 // @ts-ignore
   var peg$currPos = 0;
@@ -1773,7 +1783,51 @@ peg$parseChunk() {
 // @ts-ignore
                                           if (s0 === peg$FAILED) {
 // @ts-ignore
-                                            s0 = peg$parseIgnoreStatement();
+                                            s0 = peg$currPos;
+// @ts-ignore
+                                            s1 = peg$parse_();
+// @ts-ignore
+                                            peg$savedPos = peg$currPos;
+// @ts-ignore
+                                            s2 = peg$f15();
+// @ts-ignore
+                                            if (s2) {
+// @ts-ignore
+                                              s2 = undefined;
+// @ts-ignore
+                                            } else {
+// @ts-ignore
+                                              s2 = peg$FAILED;
+                                            }
+// @ts-ignore
+                                            if (s2 !== peg$FAILED) {
+// @ts-ignore
+                                              s3 = peg$parseFunctionExpression();
+// @ts-ignore
+                                              if (s3 !== peg$FAILED) {
+// @ts-ignore
+                                                s1 = [s1, s2, s3];
+// @ts-ignore
+                                                s0 = s1;
+// @ts-ignore
+                                              } else {
+// @ts-ignore
+                                                peg$currPos = s0;
+// @ts-ignore
+                                                s0 = peg$FAILED;
+                                              }
+// @ts-ignore
+                                            } else {
+// @ts-ignore
+                                              peg$currPos = s0;
+// @ts-ignore
+                                              s0 = peg$FAILED;
+                                            }
+// @ts-ignore
+                                            if (s0 === peg$FAILED) {
+// @ts-ignore
+                                              s0 = peg$parseIgnoreStatement();
+                                            }
                                           }
                                         }
                                       }
@@ -1863,7 +1917,7 @@ peg$parseDocBlock() {
 // @ts-ignore
       peg$savedPos = s0;
 // @ts-ignore
-      s0 = peg$f15(s2);
+      s0 = peg$f16(s2);
 // @ts-ignore
     } else {
 // @ts-ignore
@@ -1905,7 +1959,7 @@ peg$parseDocBlock() {
 // @ts-ignore
         peg$savedPos = s0;
 // @ts-ignore
-        s0 = peg$f16(s2);
+        s0 = peg$f17(s2);
 // @ts-ignore
       } else {
 // @ts-ignore
@@ -1988,7 +2042,7 @@ peg$parseIfDirective() {
 // @ts-ignore
             peg$savedPos = s0;
 // @ts-ignore
-            s0 = peg$f17();
+            s0 = peg$f18();
 // @ts-ignore
           } else {
 // @ts-ignore
@@ -2091,7 +2145,7 @@ peg$parseIfndefDirective() {
 // @ts-ignore
             peg$savedPos = s0;
 // @ts-ignore
-            s0 = peg$f18();
+            s0 = peg$f19();
 // @ts-ignore
           } else {
 // @ts-ignore
@@ -2194,7 +2248,7 @@ peg$parseIfdefDirective() {
 // @ts-ignore
             peg$savedPos = s0;
 // @ts-ignore
-            s0 = peg$f19();
+            s0 = peg$f20();
 // @ts-ignore
           } else {
 // @ts-ignore
@@ -2297,7 +2351,7 @@ peg$parseElifDirective() {
 // @ts-ignore
             peg$savedPos = s0;
 // @ts-ignore
-            s0 = peg$f20();
+            s0 = peg$f21();
 // @ts-ignore
           } else {
 // @ts-ignore
@@ -2400,7 +2454,7 @@ peg$parseElseDirective() {
 // @ts-ignore
             peg$savedPos = s0;
 // @ts-ignore
-            s0 = peg$f21();
+            s0 = peg$f22();
 // @ts-ignore
           } else {
 // @ts-ignore
@@ -2503,7 +2557,7 @@ peg$parseEndifDirective() {
 // @ts-ignore
             peg$savedPos = s0;
 // @ts-ignore
-            s0 = peg$f22();
+            s0 = peg$f23();
 // @ts-ignore
           } else {
 // @ts-ignore
@@ -2614,7 +2668,7 @@ peg$parseDefineDirective() {
 // @ts-ignore
                 peg$savedPos = s0;
 // @ts-ignore
-                s0 = peg$f23(s6);
+                s0 = peg$f24(s6);
 // @ts-ignore
               } else {
 // @ts-ignore
@@ -2791,7 +2845,7 @@ peg$parseIncludeDirective() {
 // @ts-ignore
                   peg$savedPos = s0;
 // @ts-ignore
-                  s0 = peg$f24(s7);
+                  s0 = peg$f25(s7);
 // @ts-ignore
                 } else {
 // @ts-ignore
@@ -2966,7 +3020,7 @@ peg$parseIncludeDirective() {
 // @ts-ignore
                     peg$savedPos = s0;
 // @ts-ignore
-                    s0 = peg$f25(s7);
+                    s0 = peg$f26(s7);
 // @ts-ignore
                   } else {
 // @ts-ignore
@@ -3245,7 +3299,7 @@ peg$parseVariables() {
 // @ts-ignore
       peg$savedPos = s2;
 // @ts-ignore
-      s2 = peg$f26(s3);
+      s2 = peg$f27(s3);
 // @ts-ignore
     } else {
 // @ts-ignore
@@ -3350,7 +3404,7 @@ peg$parseVariables() {
 // @ts-ignore
           peg$savedPos = s3;
 // @ts-ignore
-          s3 = peg$f26(s4);
+          s3 = peg$f27(s4);
 // @ts-ignore
         } else {
 // @ts-ignore
@@ -3429,7 +3483,7 @@ peg$parseGlobalVariable() {
 // @ts-ignore
           peg$savedPos = s0;
 // @ts-ignore
-          s0 = peg$f27(s1, s3);
+          s0 = peg$f28(s1, s3);
 // @ts-ignore
         } else {
 // @ts-ignore
@@ -3547,7 +3601,7 @@ peg$parseFunction() {
 // @ts-ignore
               peg$savedPos = s0;
 // @ts-ignore
-              s0 = peg$f28(s1, s3, s6);
+              s0 = peg$f29(s1, s3, s6);
 // @ts-ignore
             } else {
 // @ts-ignore
@@ -3789,7 +3843,7 @@ peg$parseInterfaceDeclaration() {
 // @ts-ignore
           peg$savedPos = s0;
 // @ts-ignore
-          s0 = peg$f29(s3, s4);
+          s0 = peg$f30(s3, s4);
 // @ts-ignore
         } else {
 // @ts-ignore
@@ -3845,7 +3899,7 @@ peg$parseInterfaceDeclaration() {
 // @ts-ignore
             peg$savedPos = s0;
 // @ts-ignore
-            s0 = peg$f30(s3);
+            s0 = peg$f31(s3);
 // @ts-ignore
           } else {
 // @ts-ignore
@@ -3945,7 +3999,7 @@ peg$parseInterfaceMethodDeclaration() {
 // @ts-ignore
               peg$savedPos = s0;
 // @ts-ignore
-              s0 = peg$f31(s1, s3, s6);
+              s0 = peg$f32(s1, s3, s6);
 // @ts-ignore
             } else {
 // @ts-ignore
@@ -4085,7 +4139,7 @@ peg$parseMethodArgument() {
 // @ts-ignore
         peg$savedPos = s0;
 // @ts-ignore
-        s0 = peg$f32(s1, s3);
+        s0 = peg$f33(s1, s3);
 // @ts-ignore
       } else {
 // @ts-ignore
@@ -4143,7 +4197,72 @@ peg$parseMethodExpression() {
 // @ts-ignore
           peg$savedPos = s0;
 // @ts-ignore
-          s0 = peg$f33(s1, s3);
+          s0 = peg$f34(s1, s3);
+// @ts-ignore
+        } else {
+// @ts-ignore
+          peg$currPos = s0;
+// @ts-ignore
+          s0 = peg$FAILED;
+        }
+// @ts-ignore
+      } else {
+// @ts-ignore
+        peg$currPos = s0;
+// @ts-ignore
+        s0 = peg$FAILED;
+      }
+// @ts-ignore
+    } else {
+// @ts-ignore
+      peg$currPos = s0;
+// @ts-ignore
+      s0 = peg$FAILED;
+    }
+
+// @ts-ignore
+    return s0;
+  }
+
+// @ts-ignore
+  function // @ts-ignore
+peg$parseFunctionExpression() {
+// @ts-ignore
+    var s0, s1, s2, s3, s4, s5;
+
+// @ts-ignore
+    s0 = peg$currPos;
+// @ts-ignore
+    s1 = peg$parseType();
+// @ts-ignore
+    if (s1 !== peg$FAILED) {
+// @ts-ignore
+      s2 = peg$parse_();
+// @ts-ignore
+      s3 = peg$parseVariables();
+// @ts-ignore
+      if (s3 !== peg$FAILED) {
+// @ts-ignore
+        s4 = peg$parse_();
+// @ts-ignore
+        if (input.charCodeAt(peg$currPos) === 59) {
+// @ts-ignore
+          s5 = peg$c14;
+// @ts-ignore
+          peg$currPos++;
+// @ts-ignore
+        } else {
+// @ts-ignore
+          s5 = peg$FAILED;
+// @ts-ignore
+          if (peg$silentFails === 0) { peg$fail(peg$e21); }
+        }
+// @ts-ignore
+        if (s5 !== peg$FAILED) {
+// @ts-ignore
+          peg$savedPos = s0;
+// @ts-ignore
+          s0 = peg$f35(s1, s3);
 // @ts-ignore
         } else {
 // @ts-ignore
@@ -4208,7 +4327,7 @@ peg$parsePropertyDeclaration() {
 // @ts-ignore
           peg$savedPos = s0;
 // @ts-ignore
-          s0 = peg$f34(s1, s3);
+          s0 = peg$f36(s1, s3);
 // @ts-ignore
         } else {
 // @ts-ignore
@@ -4279,7 +4398,7 @@ peg$parsePropertyDeclaration() {
 // @ts-ignore
               peg$savedPos = s0;
 // @ts-ignore
-              s0 = peg$f35(s1, s5);
+              s0 = peg$f37(s1, s5);
 // @ts-ignore
             } else {
 // @ts-ignore
@@ -4394,7 +4513,7 @@ peg$parseTypeDeclaration() {
 // @ts-ignore
           peg$savedPos = s0;
 // @ts-ignore
-          s0 = peg$f36(s3, s4);
+          s0 = peg$f38(s3, s4);
 // @ts-ignore
         } else {
 // @ts-ignore
@@ -4566,7 +4685,7 @@ peg$parseClassDeclaration() {
 // @ts-ignore
           peg$savedPos = s0;
 // @ts-ignore
-          s0 = peg$f37(s3, s5, s6);
+          s0 = peg$f39(s3, s5, s6);
 // @ts-ignore
         } else {
 // @ts-ignore
@@ -4622,7 +4741,7 @@ peg$parseClassDeclaration() {
 // @ts-ignore
             peg$savedPos = s0;
 // @ts-ignore
-            s0 = peg$f38(s3);
+            s0 = peg$f40(s3);
 // @ts-ignore
           } else {
 // @ts-ignore
@@ -4745,7 +4864,7 @@ peg$parseClassMethod() {
 // @ts-ignore
                 peg$savedPos = s0;
 // @ts-ignore
-                s0 = peg$f39(s1, s3, s5, s8);
+                s0 = peg$f41(s1, s3, s5, s8);
 // @ts-ignore
               } else {
 // @ts-ignore
@@ -4831,7 +4950,7 @@ peg$parseClassVariableDeclaration() {
 // @ts-ignore
           peg$savedPos = s0;
 // @ts-ignore
-          s0 = peg$f40(s1, s3);
+          s0 = peg$f42(s1, s3);
 // @ts-ignore
         } else {
 // @ts-ignore
@@ -4974,7 +5093,7 @@ peg$parseType() {
 // @ts-ignore
       peg$savedPos = s0;
 // @ts-ignore
-      s1 = peg$f41(s1);
+      s1 = peg$f43(s1);
     }
 // @ts-ignore
     s0 = s1;
@@ -5143,7 +5262,7 @@ peg$parseCustomType() {
 // @ts-ignore
               peg$savedPos = s0;
 // @ts-ignore
-              s0 = peg$f42(s1, s3);
+              s0 = peg$f44(s1, s3);
 // @ts-ignore
             } else {
 // @ts-ignore
@@ -5169,7 +5288,7 @@ peg$parseCustomType() {
 // @ts-ignore
               peg$savedPos = s0;
 // @ts-ignore
-              s1 = peg$f43(s1);
+              s1 = peg$f45(s1);
             }
 // @ts-ignore
             s0 = s1;
@@ -5662,7 +5781,7 @@ peg$parseBlockCommentToken() {
 // @ts-ignore
         peg$savedPos = s0;
 // @ts-ignore
-        s0 = peg$f44();
+        s0 = peg$f46();
 // @ts-ignore
       } else {
 // @ts-ignore
@@ -5864,7 +5983,7 @@ peg$parseLineCommentToken() {
 // @ts-ignore
         peg$savedPos = s0;
 // @ts-ignore
-        s0 = peg$f45();
+        s0 = peg$f47();
 // @ts-ignore
       } else {
 // @ts-ignore
@@ -6000,7 +6119,7 @@ peg$parseIdentToken() {
 // @ts-ignore
           peg$savedPos = s0;
 // @ts-ignore
-          s0 = peg$f46(s3);
+          s0 = peg$f48(s3);
 // @ts-ignore
         } else {
 // @ts-ignore
@@ -9992,6 +10111,7 @@ export type Chunk =
   | [_, undefined, PropertyDeclaration]
   | [_, undefined, TypeDeclaration]
   | [_, undefined, MethodExpression]
+  | [_, undefined, FunctionExpression]
   | IgnoreStatement;
 export type _ = (WhiteSpace | BlockCommentToken | LineCommentToken)[];
 export type DocBlock = BlockCommentToken | [...LineCommentToken[]];
@@ -10033,6 +10153,7 @@ export type MethodArgument = [
   }
 ];
 export type MethodExpression = void;
+export type FunctionExpression = void;
 export type PropertyDeclaration = void;
 export type TypeDeclaration = void;
 export type ClassDeclaration = void;

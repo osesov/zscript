@@ -36,6 +36,7 @@ export interface ClassVariable extends NameAndType
     begin: Position
     end: Position
     docBlock: DocBlock
+    parent: ClassInfo
 }
 
 export interface ClassMethodVariable extends NameAndType
@@ -43,6 +44,15 @@ export interface ClassMethodVariable extends NameAndType
     begin: Position
     end: Position
     docBlock: DocBlock
+    parent: ClassMethodInfo
+}
+
+export interface GlobalFunctionVariable extends NameAndType
+{
+    begin: Position
+    end: Position
+    docBlock: DocBlock
+    parent: GlobalFunction
 }
 
 export interface MethodArgument
@@ -56,17 +66,6 @@ export interface MethodArgument
 export interface WithContext
 {
     context: ContextTag
-}
-export interface ClassMethodInfo extends WithContext, NameAndType
-{
-    context: ContextTag.METHOD
-    begin: Position
-    end: Position
-    className: string
-    visibility: string
-    args: MethodArgument[]
-    variables: ClassMethodVariable[]
-    docBlock: DocBlock
 }
 
 export interface ClassInfo extends WithContext
@@ -82,6 +81,19 @@ export interface ClassInfo extends WithContext
     docBlock: DocBlock
 }
 
+export interface ClassMethodInfo extends WithContext, NameAndType
+{
+    context: ContextTag.METHOD
+    begin: Position
+    end: Position
+    parent: ClassInfo
+    visibility: string
+    args: MethodArgument[]
+    variables: ClassMethodVariable[]
+    docBlock: DocBlock
+}
+
+
 export interface TypeInfo extends NameAndType
 {
     begin: Position
@@ -95,6 +107,7 @@ export interface InterfaceMethod extends NameAndType
     end: Position
     args: NameAndType[]
     docBlock: DocBlock
+    parent: InterfaceInfo
 }
 
 export interface InterfaceProperty extends NameAndType
@@ -102,6 +115,7 @@ export interface InterfaceProperty extends NameAndType
     begin: Position
     end: Position
     docBlock: DocBlock
+    parent: InterfaceInfo
 }
 
 export interface InterfaceInfo extends WithContext
@@ -138,58 +152,34 @@ export interface GlobalFunction extends WithContext, NameAndType
     begin: Position
     end: Position
     args: MethodArgument[]
-    variables: ClassMethodVariable[]
+    variables: GlobalFunctionVariable[]
     docBlock: DocBlock
 }
 
 export type Span = ClassInfo | InterfaceInfo | ClassMethodInfo | GlobalFunction
 
-type SerializedSpan = {tag: string, name: string}[]
-
 export interface UnitInfoData
 {
-    readonly include: { [fileName: string]: Include[] }
-    readonly class: { [className: string]: ClassInfo }
-    readonly interface: { [ifName: string]: InterfaceInfo }
+    readonly includes: { [fileName: string]: Include[] }
+    readonly classes: { [className: string]: ClassInfo }
+    readonly interfaces: { [ifName: string]: InterfaceInfo }
     readonly types: { [name: string]: TypeInfo }
-    readonly define: { [name: string]: DefineInfo[] }
+    readonly defines: { [name: string]: DefineInfo[] }
     readonly globalVariables: { [name: string]: GlobalVariable }
     readonly globalFunctions: { [name: string]: GlobalFunction }
-    // list of spanning objects in order of begin position
-    // readonly span: SerializedSpan
 }
 
-export class UnitInfo
+export class UnitInfo implements UnitInfoData
 {
     public fileName: string
 
-    public readonly include: {
-        [fileName: string]: Include[]
-    } = {}
-
-    public readonly class: {
-        [className: string]: ClassInfo
-    } = {}
-
-    public readonly interface: {
-        [ifName: string]: InterfaceInfo
-    } = {}
-
-    public readonly types: {
-        [name: string]: TypeInfo
-    } = {}
-
-    public readonly define: {
-        [name: string]: DefineInfo[]
-    } = {}
-
-    public readonly globalVariables: {
-        [name: string]: GlobalVariable
-    } = {}
-
-    public readonly globalFunctions: {
-        [name: string]: GlobalFunction
-    } = {}
+    public readonly includes: UnitInfoData["includes"]
+    public readonly classes: UnitInfoData["classes"]
+    public readonly interfaces: UnitInfoData["interfaces"]
+    public readonly types: UnitInfoData["types"]
+    public readonly defines: UnitInfoData["defines"]
+    public readonly globalVariables: UnitInfoData["globalVariables"]
+    public readonly globalFunctions: UnitInfoData["globalFunctions"]
 
     // list of spanning objects in order of begin position
     private span: Span[] = []
@@ -200,84 +190,274 @@ export class UnitInfo
     constructor(fileName: string, data ?: UnitInfoData)
     {
         this.fileName = fileName;
-        this.include = data?.include ?? {}
-        this.class = data?.class ?? {}
-        this.interface = data?.interface ?? {}
+        this.includes = data?.includes ?? {}
+        this.classes = UnitInfo.classFromJson(data?.classes)
+        this.interfaces = UnitInfo.interfaceFromJson(data?.interfaces)
         this.types = data?.types ?? {}
-        this.define = data?.define ?? {}
+        this.defines = data?.defines ?? {}
         this.globalVariables = data?.globalVariables ?? {}
-        this.globalFunctions = data?.globalFunctions ?? {}
-        this.span = this.computeSpan() // this.deserializeSpan(data?.span)
+        this.globalFunctions = UnitInfo.functionFromJson(data?.globalFunctions)
+        this.span = this.computeSpan()
     }
 
     public toJSON(): UnitInfoData
     {
         return {
-            include: this.include,
-            define: this.define,
-            class: this.class,
-            interface: this.interface,
+            includes: this.includes,
+            defines: this.defines,
+            classes: UnitInfo.classToJson(this.classes),
+            interfaces: UnitInfo.interfaceToJson(this.interfaces),
             types: this.types,
             globalVariables: this.globalVariables,
-            globalFunctions: this.globalFunctions,
-            // span: this.serializeSpan()
+            globalFunctions: UnitInfo.functionToJson(this.globalFunctions),
         }
     }
 
-    // private classToJson()
-    // {
-    //     const classes = Object.keys(this.class)
-    //     const result =
-    // }
+    private static classFromJson(data ?: UnitInfoData["classes"]): UnitInfoData["classes"]
+    {
+        if (!data)
+            return {}
+
+        const classes = Object.keys(data)
+        const result: UnitInfoData["classes"] = {}
+
+        for(const className of classes) {
+            const classInfo = data[className]
+
+            const newClassInfo : ClassInfo = {
+                ...classInfo,
+
+                methods: classInfo.methods.map( method => ({
+                    ...method,
+                    parent: classInfo,
+                    variables: method.variables.map( variable => ({
+                        ...variable,
+                        parent: method
+                    }))
+                })),
+
+                variables: classInfo.variables.map( variable => ({
+                    ...variable,
+                    parent: classInfo
+                })),
+            }
+
+            result[className] = newClassInfo
+        }
+
+        return result;
+    }
+
+    private static classToJson(data ?: UnitInfoData["classes"]): UnitInfoData["classes"]
+    {
+        if (!data)
+            return {}
+
+        const classes = Object.keys(data)
+        const result: UnitInfoData["classes"] = {}
+
+        const localToJson = (info: ClassMethodVariable) : ClassMethodVariable => {
+
+            const newInfo: Partial<ClassMethodVariable> = {
+                ...info,
+                parent: undefined,
+            }
+
+            return newInfo as ClassMethodVariable
+        }
+
+        const methodToJson = (info: ClassMethodInfo) : ClassMethodInfo => {
+
+            const newInfo: Partial<ClassMethodInfo> = {
+                ...info,
+                parent: undefined,
+                variables: info.variables.map( e => localToJson(e))
+            }
+
+            return newInfo as ClassMethodInfo
+        }
+
+        const variableToJson = (info: ClassVariable) : ClassVariable => {
+
+            const newInfo: Partial<ClassVariable> = {
+                ...info,
+                parent: undefined
+            }
+
+            return newInfo as ClassVariable
+        }
+
+        for(const className of classes) {
+            const classInfo = data[className]
+
+            const newClassInfo : ClassInfo = {
+                ...classInfo,
+
+                methods: classInfo.methods.map( e => methodToJson(e)),
+                variables: classInfo.variables.map( e => variableToJson(e)),
+            }
+
+            result[className] = newClassInfo
+        }
+
+        return result;
+    }
+
+    private static interfaceFromJson(data ?: UnitInfoData["interfaces"]): UnitInfoData["interfaces"]
+    {
+        if (!data)
+            return {}
+
+        const interfaces = Object.keys(data)
+        const result: UnitInfoData["interfaces"] = {}
+
+        for(const interfaceName of interfaces) {
+            const interfaceInfo = data[interfaceName]
+
+            const newInterfaceInfo : InterfaceInfo = {
+                ...interfaceInfo,
+
+                methods: interfaceInfo.methods.map( method => ({
+                    ...method,
+                    parent: interfaceInfo
+                })),
+
+                readProp: interfaceInfo.readProp.map( property => ({
+                    ...property,
+                    parent: interfaceInfo
+                })),
+                writeProp: interfaceInfo.writeProp.map( property => ({
+                    ...property,
+                    parent: interfaceInfo
+                })),
+            }
+
+            result[interfaceName] = newInterfaceInfo
+        }
+
+        return result;
+    }
+
+    private static interfaceToJson(data ?: UnitInfoData["interfaces"]): UnitInfoData["interfaces"]
+    {
+        if (!data)
+            return {}
+
+        const interfaces = Object.keys(data)
+        const result: UnitInfoData["interfaces"] = {}
+
+        const methodToJson = (info: InterfaceMethod) : InterfaceMethod => {
+
+            const newInfo: Partial<InterfaceMethod> = {
+                ...info,
+                parent: undefined,
+            }
+
+            return newInfo as InterfaceMethod
+        }
+
+        const propertyToJson = (info: InterfaceProperty) : InterfaceProperty => {
+
+            const newInfo: Partial<InterfaceProperty> = {
+                ...info,
+                parent: undefined
+            }
+
+            return newInfo as InterfaceProperty
+        }
+
+        for(const interfaceName of interfaces) {
+            const interfaceInfo = data[interfaceName]
+
+            const newInterfaceInfo : InterfaceInfo = {
+                ...interfaceInfo,
+
+                methods: interfaceInfo.methods.map( e => methodToJson(e)),
+                readProp: interfaceInfo.readProp.map( e => propertyToJson(e)),
+                writeProp: interfaceInfo.writeProp.map( e => propertyToJson(e)),
+            }
+
+            result[interfaceName] = newInterfaceInfo
+        }
+
+        return result;
+    }
+
+    private static functionFromJson(data ?: UnitInfoData["globalFunctions"]): UnitInfoData["globalFunctions"]
+    {
+        if (!data)
+            return {}
+
+        const functions = Object.keys(data)
+        const result: UnitInfoData["globalFunctions"] = {}
+
+        for(const functionName of functions) {
+            const functionInfo = data[functionName]
+
+            const newFunctionInfo : GlobalFunction = {
+                ...functionInfo,
+
+                variables: functionInfo.variables.map( variable => ({
+                    ...variable,
+                    parent: functionInfo
+                })),
+            }
+
+            result[functionName] = newFunctionInfo
+        }
+
+        return result;
+    }
+
+    private static functionToJson(data ?: UnitInfoData["globalFunctions"]): UnitInfoData["globalFunctions"]
+    {
+        if (!data)
+            return {}
+
+        const classes = Object.keys(data)
+        const result: UnitInfoData["globalFunctions"] = {}
+
+        const variableToJson = (info: GlobalFunctionVariable) : GlobalFunctionVariable => {
+
+            const newInfo: Partial<GlobalFunctionVariable> = {
+                ...info,
+                parent: undefined
+            }
+
+            return newInfo as GlobalFunctionVariable
+        }
+
+        for(const className of classes) {
+            const classInfo = data[className]
+
+            const newClassInfo : GlobalFunction = {
+                ...classInfo,
+
+                variables: classInfo.variables.map( e => variableToJson(e)),
+            }
+
+            result[className] = newClassInfo
+        }
+
+        return result;
+    }
 
     static fromJson(fileName: string, obj: UnitInfoData): UnitInfo
     {
         return new UnitInfo(fileName, obj)
     }
 
-    private serializeSpan(): SerializedSpan
-    {
-        const result: SerializedSpan = []
-
-        for (const it of this.span) {
-            switch(it.context) {
-            // case ContextTag.TOP_LEVEL:
-                // break;
-
-            case ContextTag.CLASS:
-            case ContextTag.INTERFACE:
-            case ContextTag.FUNCTION:
-                result.push( {
-                    tag: ContextTag[it.context],
-                    name: it.name
-                })
-                break;
-            case ContextTag.METHOD:
-                result.push( {
-                    tag: ContextTag[it.context],
-                    name: [ it.className, it.name ].join('.')
-                })
-                break;
-
-            // default:
-                // assertUnreachable(it.context)
-            }
-        }
-
-        return result;
-    }
-
     private computeSpan(): Span[]
     {
         const result: Span[] = []
 
-        for (const it of Object.values(this.class)) {
+        for (const it of Object.values(this.classes)) {
             result.push(it)
             for (const m of it.methods) {
                 result.push(m)
             }
         }
-        for (const it of Object.values(this.interface)) {
+        for (const it of Object.values(this.interfaces)) {
             result.push(it)
         }
 
@@ -303,50 +483,13 @@ export class UnitInfo
         return result;
     }
 
-    private deserializeSpan(source ?: SerializedSpan): Span[]
-    {
-        const result: Span[] = []
-
-        if (!source)
-            return result;
-
-        for (const it of source) {
-            const tagEntry = Object.entries(ContextTag).find(([key, val]) =>
-                key === it.tag)
-
-            if (tagEntry === undefined)
-                return []
-            const tag = tagEntry[1]
-            let obj : Span | undefined
-
-            switch(tag) {
-            case ContextTag.CLASS: obj = this.class[it.name]; break;
-            case ContextTag.INTERFACE: obj = this.interface[it.name]; break;
-            case ContextTag.FUNCTION: obj = this.globalFunctions[it.name]; break;
-            case ContextTag.METHOD:
-                {
-                    const [className, methodName] = it.name.split('.');
-                    const classInfo = this.class[className];
-                    obj = classInfo?.methods.find(e=> e.name === methodName);
-                    break;
-                }
-            }
-
-            if (obj === undefined)
-                throw Error("Unable to parse span");
-
-            result.push(obj)
-        }
-        return result;
-    }
-
     public addInclude(system: boolean, name: string, location: FileRange): void
     {
-        if (!(name in this.include)) {
-            this.include[name] = []
+        if (!(name in this.includes)) {
+            this.includes[name] = []
         }
 
-        this.include[name].push({
+        this.includes[name].push({
             system: system,
             position: location.start
         })
@@ -366,7 +509,7 @@ export class UnitInfo
             docBlock: docBlock
         }
 
-        this.class[name] = classInfo
+        this.classes[name] = classInfo
         this.stack.push(classInfo)
         this.span.push(classInfo)
     }
@@ -385,14 +528,14 @@ export class UnitInfo
             docBlock: docBlock
         }
 
-        this.interface[name] = classInfo
+        this.interfaces[name] = classInfo
         this.stack.push(classInfo)
         this.span.push(classInfo)
     }
 
     public addInterfaceMethod(type: Type, name: string, args: [Type,string][], location: FileRange, docBlock: DocBlock)
     {
-        const m = this.getCurrentInterface()
+        const currentInterface = this.getCurrentInterface()
 
         const info : InterfaceMethod = {
             name: name,
@@ -400,37 +543,40 @@ export class UnitInfo
             begin: location.start,
             end: location.end,
             args: args.map(e => ({ type: e[0], name: e[1]})),
-            docBlock: docBlock
+            docBlock: docBlock,
+            parent: currentInterface
         }
-        m.methods.push(info)
+        currentInterface.methods.push(info)
     }
 
     public addReadProperty(type: Type, name: string, location: FileRange, docBlock: DocBlock)
     {
-        const m = this.getCurrentInterface()
+        const currentInterface = this.getCurrentInterface()
 
         const info : InterfaceProperty = {
             name: name,
             type: type,
             begin: location.start,
             end: location.end,
-            docBlock: docBlock
+            docBlock: docBlock,
+            parent: currentInterface
         }
-        m.readProp.push(info)
+        currentInterface.readProp.push(info)
     }
 
     public addWriteProperty(type: Type, name: string, location: FileRange, docBlock: DocBlock)
     {
-        const m = this.getCurrentInterface()
+        const currentInterface = this.getCurrentInterface()
 
         const info : InterfaceProperty = {
             name: name,
             type: type,
             begin: location.start,
             end: location.end,
-            docBlock: docBlock
+            docBlock: docBlock,
+            parent: currentInterface
         }
-        m.writeProp.push(info)
+        currentInterface.writeProp.push(info)
     }
 
 
@@ -452,7 +598,7 @@ export class UnitInfo
             })),
             variables: [],
             docBlock: docBlock,
-            className: currentClass.name
+            parent: currentClass
         }
 
         currentClass.methods.push(methodInfo)
@@ -462,15 +608,7 @@ export class UnitInfo
 
     public addMethodVariables(type: Type, names: [string, FileRange][], location: FileRange, docBlock: DocBlock)
     {
-        const context = this.getCurrentContext();
-        const current = context == ContextTag.METHOD
-            ? this.getCurrentMethod(location)
-            : context === ContextTag.FUNCTION ? this.getCurrentFunction(location)
-            : null;
-
-        if (!current) {
-            throw Error("Unexpected context: " + current)
-        }
+        const currentClass = this.getCurrentMethod(location)
 
         for (const [name, location] of names) {
             const info: ClassMethodVariable = {
@@ -478,10 +616,29 @@ export class UnitInfo
                 end: location.end,
                 name: name,
                 type: type,
-                docBlock: docBlock
+                docBlock: docBlock,
+                parent: currentClass
             }
 
-            current.variables.push(info)
+            currentClass.variables.push(info)
+        }
+    }
+
+    public addFunctionVariables(type: Type, names: [string, FileRange][], location: FileRange, docBlock: DocBlock)
+    {
+        const currentFunction = this.getCurrentFunction(location)
+
+        for (const [name, location] of names) {
+            const info: GlobalFunctionVariable = {
+                begin: location.start,
+                end: location.end,
+                name: name,
+                type: type,
+                docBlock: docBlock,
+                parent: currentFunction
+            }
+
+            currentFunction.variables.push(info)
         }
     }
 
@@ -493,7 +650,8 @@ export class UnitInfo
             end: location.end,
             name: name,
             type: type,
-            docBlock: docBlock
+            docBlock: docBlock,
+            parent: currentClass
         }
 
         currentClass.variables.push(info)
@@ -539,9 +697,9 @@ export class UnitInfo
 
     public addDefine(name: string, location: FileRange, docBlock: DocBlock)
     {
-        if (this.define[name] === undefined)
-            this.define[name] = []
-        this.define[name].push({
+        if (this.defines[name] === undefined)
+            this.defines[name] = []
+        this.defines[name].push({
             name: name,
             begin: location.start,
             end: location.end,

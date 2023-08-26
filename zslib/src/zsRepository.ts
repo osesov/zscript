@@ -1,4 +1,4 @@
-import { ClassInfo, ContextTag, InterfaceInfo, UnitInfo, UnitInfoData } from './lang'
+import { ClassInfo, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, UnitInfo, UnitInfoData } from './lang'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
@@ -278,7 +278,7 @@ export class ZsRepository
                 this.saveFileCache(fileName, doc, unitInfo);
 
             const baseName = path.dirname(fileName)
-            for (const it of Object.keys(unitInfo.include)) {
+            for (const it of Object.keys(unitInfo.includes)) {
                 const n = this.findInclude(it, baseName);
                 if (!n) {
                     this.logger.warn("Unable to find include {file}. Update 'zscript.includeDir'.", it)
@@ -429,7 +429,7 @@ export class ZsRepository
                 if (looking.size === 0)
                     break;
                 for (const name of looking) {
-                    const e = ((): (ClassInfo|InterfaceInfo|undefined) => it.interface[name] ?? it.class[name])()
+                    const e = ((): (ClassInfo|InterfaceInfo|undefined) => it.interfaces[name] ?? it.classes[name])()
                     if (!e)
                         break;
                     result.push(e);
@@ -477,7 +477,7 @@ export class ZsRepository
                 result.push(unit)
 
                 const baseName = path.dirname(includeFile)
-                const newIncludes = Object.keys(unit.include).map( e=> this.findInclude(e, baseName))
+                const newIncludes = Object.keys(unit.includes).map( e=> this.findInclude(e, baseName))
                 queue.add(newIncludes)
             }
         }
@@ -485,11 +485,21 @@ export class ZsRepository
         return result;
     }
 
+    public getDefinesByName(includes: UnitInfo[], name: string): DefineInfo[] | undefined
+    {
+        for (const it of includes) {
+            if (name in it.defines)
+                return it.defines[name]
+        }
+
+        return undefined
+    }
+
     public getClassByName(includes: UnitInfo[], className: string): ClassInfo | undefined
     {
         for (const it of includes) {
-            if (className in it.class)
-                return it.class[className]
+            if (className in it.classes)
+                return it.classes[className]
         }
 
         return undefined
@@ -498,8 +508,28 @@ export class ZsRepository
     public getInterfaceByName(includes: UnitInfo[], ifName: string): InterfaceInfo | undefined
     {
         for (const it of includes) {
-            if (ifName in it.interface)
-                return it.interface[ifName]
+            if (ifName in it.interfaces)
+                return it.interfaces[ifName]
+        }
+
+        return undefined
+    }
+
+    public getGlobalFunctionByName(includes: UnitInfo[], ifName: string): GlobalFunction | undefined
+    {
+        for (const it of includes) {
+            if (ifName in it.globalFunctions)
+                return it.globalFunctions[ifName]
+        }
+
+        return undefined
+    }
+
+    public getGlobalVariableByName(includes: UnitInfo[], ifName: string): GlobalVariable | undefined
+    {
+        for (const it of includes) {
+            if (ifName in it.globalVariables)
+                return it.globalVariables[ifName]
         }
 
         return undefined

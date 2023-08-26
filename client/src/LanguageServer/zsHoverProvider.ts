@@ -3,13 +3,14 @@ import { ZsRepository } from '../../../zslib/src/zsRepository'
 import { Logger, logSystem } from '../../../zslib/src/logger';
 import { fromVscode, toVscode } from '../../../zslib/src/vscodeUtil';
 import { ZsHoverSink, ZsHover } from '../../../zslib/src/zsHover'
-import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ContextTag, DocBlock, GlobalFunction, InterfaceInfo, InterfaceMethod, MethodArgument, NameAndType, Type } from '../../../zslib/src/lang';
+import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, DefineInfo, DocBlock, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, MethodArgument, NameAndType, Type } from '../../../zslib/src/lang';
+import { languageId } from '../common';
 
 class ZsHoverSinkImpl implements ZsHoverSink
 {
     public hover: vscode.Hover | undefined
 
-    private formatVariable(className: string|undefined, name: string, ret: Type)
+    private formatVariable(className: ClassInfo|InterfaceInfo|undefined, name: string, ret: Type)
     {
         let result = ""
 
@@ -22,14 +23,14 @@ class ZsHoverSinkImpl implements ZsHoverSink
         return result;
     }
 
-    private formatProto(className: string|undefined, name: string, ret: Type, args: NameAndType[])
+    private formatProto(parent: ClassInfo|InterfaceInfo|undefined, name: string, ret: Type, args: NameAndType[])
     {
         let result = ""
 
         result += ret.join(' ') + ' ';
 
-        if (className)
-            result += className + '.'
+        if (parent)
+            result += parent.name + '.'
 
         result += name + '(';
         result += args.map(e => e.type.join(' ') + ' ' + e.name).join(', ')
@@ -37,26 +38,26 @@ class ZsHoverSinkImpl implements ZsHoverSink
         return result;
     }
 
-    private format(tag: string, name: string, doc: DocBlock): string
+    private format(tag: string, name: string, doc: DocBlock): vscode.MarkdownString
     {
-        const result: string[] = []
-        const title = `### [${tag}] ${name}`
+        const title = `(${tag}) ${name}`
+        const ms = new vscode.MarkdownString()
+        ms.appendCodeblock(title, languageId)
 
-        result.push(title)
         if (doc.length > 0) {
-            result.push("", doc.join("\n\n"))
+            ms.appendMarkdown('---\n')
+            doc.forEach(e=>ms.appendText(e))
         }
-
-        return result.join('\n')
+        return ms;
     }
 
-    setVariable(info: ClassMethodVariable): void
+    setClassVariable(info: ClassVariable): void
     {
         if (this.hover)
             return
 
         const title = this.formatVariable(undefined, info.name, info.type)
-        this.hover = new vscode.Hover(this.format("variable", title, info.docBlock))
+        this.hover = new vscode.Hover(this.format("class variable", title, info.docBlock))
     }
 
     setArgument(info: MethodArgument): void
@@ -73,7 +74,7 @@ class ZsHoverSinkImpl implements ZsHoverSink
         if (this.hover)
             return
 
-        const title = this.formatProto(info.className, info.name, info.type, info.args)
+        const title = this.formatProto(info.parent, info.name, info.type, info.args)
 
         this.hover = new vscode.Hover(
             this.format("method", title, info.docBlock),
@@ -81,7 +82,32 @@ class ZsHoverSinkImpl implements ZsHoverSink
         )
     }
 
-    setFunction(info: GlobalFunction): void
+    setClassMethodVariable(info: ClassMethodVariable): void
+    {
+        if (this.hover)
+            return
+
+        const title = this.formatVariable(undefined, info.name, info.type)
+        this.hover = new vscode.Hover(
+            this.format("method variable", title, info.docBlock),
+            toVscode.range(info.begin, info.end)
+        )
+    }
+
+    setGlobalVariable(info: GlobalVariable): void
+    {
+        if (this.hover)
+            return
+
+        const title = this.formatVariable(undefined, info.name, info.type)
+        this.hover = new vscode.Hover(
+            this.format("global variable", title, info.docBlock),
+            toVscode.range(info.begin, info.end)
+        )
+    }
+
+
+    setGlobalFunction(info: GlobalFunction): void
     {
         if (this.hover)
             return
@@ -89,6 +115,18 @@ class ZsHoverSinkImpl implements ZsHoverSink
         const title = this.formatProto(undefined, info.name, info.type, info.args)
         this.hover = new vscode.Hover(
             this.format("function", title, info.docBlock),
+            toVscode.range(info.begin, info.end)
+        )
+    }
+
+    setGlobalFunctionVariable(info: GlobalFunctionVariable): void
+    {
+        if (this.hover)
+            return
+
+        const title = this.formatVariable(undefined, info.name, info.type)
+        this.hover = new vscode.Hover(
+            this.format("local variable", title, info.docBlock),
             toVscode.range(info.begin, info.end)
         )
     }
@@ -128,6 +166,32 @@ class ZsHoverSinkImpl implements ZsHoverSink
         )
     }
 
+    setInterfaceProperty(info: InterfaceProperty): void
+    {
+        if (this.hover)
+            return
+
+        const title = this.formatVariable(info.parent, info.name, info.type);
+
+        this.hover = new vscode.Hover(
+            this.format("property", title, info.docBlock),
+            toVscode.range(info.begin, info.end)
+        )
+    }
+
+    setDefine(info: DefineInfo[]): void {
+        if (this.hover)
+            return
+
+        const result = new vscode.MarkdownString
+        info.forEach( define => {
+            const line = this.format("define", define.name, define.docBlock)
+            result.appendMarkdown(line.value)
+        })
+
+        this.hover = new vscode.Hover(result);
+    }
+
 }
 
 export class ZsHoverProvider implements vscode.HoverProvider
@@ -149,10 +213,29 @@ export class ZsHoverProvider implements vscode.HoverProvider
         if (!word)
             return;
         const fileName = document.uri.fsPath
-        const result = new ZsHoverSinkImpl
-        await this.repo.onDocumentAccess(document);
-        await this.provider.getHover(result, fileName, word.word, fromVscode.position(position), token);
+        this.logger.debug("Query hover for {@word} in {file}", word, this.repo.stripPathPrefix(fileName));
+        try {
+            const sink = new ZsHoverSinkImpl
+            await this.repo.onDocumentAccess(document);
+            await this.provider.getHover(sink, fileName, word.word, fromVscode.position(position), token);
 
-        return result.hover
+            const result = sink.hover
+            const getText = (e: vscode.MarkedString) => {
+                if (e instanceof vscode.MarkdownString)
+                    return e.value;
+
+                if (typeof e === "string")
+                    return e;
+
+                return `[language: ${e.language}] ${e.value}`
+            }
+
+            this.logger.info(`Hover for ${word.word}: ${result?.contents.map(e=>getText(e)).join('\n')}`)
+            return result;
+        }
+
+        catch(e: unknown) {
+            this.logger.error("Query hover error: {error}", e);
+        }
     }
 }

@@ -35,22 +35,21 @@ export class ZsCompletions
     ////
     private getUnitCompletions(result: ZsCompletionSink, prefix: string, position: Position|undefined, unit: UnitInfo, token: CancellationToken): void
     {
-        // todo: apply token
-        for (const e of Object.keys(unit.class)) {
+        for (const e of Object.keys(unit.classes)) {
             if (token.isCancellationRequested)
                 break
             if (e.startsWith(prefix))
                 result.add(e, CompletionItemKind.Class)
         }
 
-        for (const e of Object.keys(unit.interface)) {
+        for (const e of Object.keys(unit.interfaces)) {
             if (token.isCancellationRequested)
                 break
             if (e.startsWith(prefix))
                 result.add(e, CompletionItemKind.Interface)
         }
 
-        for (const e of Object.keys(unit.define)) {
+        for (const e of Object.keys(unit.defines)) {
             if (token.isCancellationRequested)
                 break
             if (e.startsWith(prefix))

@@ -1,16 +1,24 @@
 import { ZsRepository } from "./zsRepository";
-import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ContextTag, GlobalFunction, InterfaceInfo, InterfaceMethod, MethodArgument, Position, UnitInfo } from "./lang";
+import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, MethodArgument, Position, UnitInfo } from "./lang";
 import { CancellationToken } from "./util";
 
 export interface ZsHoverSink
 {
-    setVariable(info: ClassMethodVariable): void
     setArgument(info: MethodArgument): void
-    setClassMethod(info: ClassMethodInfo): void
-    setInterfaceMethod(info: InterfaceMethod): void
-    setFunction(info: GlobalFunction): void
+
+    setDefine(info: DefineInfo[]): void
     setClass(info: ClassInfo): void
+    setClassMethod(info: ClassMethodInfo): void
+    setClassVariable(info: ClassVariable): void
+    setClassMethodVariable(info: ClassMethodVariable): void
+
+    setGlobalVariable(info: GlobalVariable): void
+    setGlobalFunction(info: GlobalFunction): void
+    setGlobalFunctionVariable(info: GlobalFunctionVariable): void
+
     setInterface(info: InterfaceInfo): void
+    setInterfaceMethod(info: InterfaceMethod): void
+    setInterfaceProperty(info: InterfaceProperty): void
 }
 
 export class ZsHover
@@ -38,7 +46,7 @@ export class ZsHover
 
             const variable = ctx.variables.find(e => e.name === word);
             if (variable) {
-                result.setVariable(variable)
+                result.setClassMethodVariable(variable)
                 return true;
             }
 
@@ -53,13 +61,13 @@ export class ZsHover
 
         const checkFunction = (ctx: GlobalFunction): boolean => {
             if (ctx.name === word) {
-                result.setFunction(ctx)
+                result.setGlobalFunction(ctx)
                 return true
             }
 
             const variable = ctx.variables.find(e => e.name === word);
             if (variable) {
-                result.setVariable(variable)
+                result.setGlobalFunctionVariable(variable)
                 return true
             }
 
@@ -83,13 +91,13 @@ export class ZsHover
 
             const readProp = ctx.readProp.find(e => e.name === word);
             if (readProp) {
-                result.setVariable(readProp);
+                result.setInterfaceProperty(readProp);
                 return true
             }
 
             const writeProp = ctx.writeProp.find(e => e.name === word);
             if (writeProp) {
-                result.setVariable(writeProp);
+                result.setInterfaceProperty(writeProp);
                 return true
             }
 
@@ -120,7 +128,7 @@ export class ZsHover
 
             const variable = ctx.variables.find(e => e.name === word);
             if (variable) {
-                result.setVariable(variable);
+                result.setClassVariable(variable);
                 return true
             }
 
@@ -168,5 +176,37 @@ export class ZsHover
                 break
             }
         }
+
+        const defineInfo = this.repo.getDefinesByName(includes, word);
+        if (defineInfo && defineInfo.length > 0) {
+            result.setDefine(defineInfo);
+            return;
+        }
+
+        const classInfo = this.repo.getClassByName(includes, word);
+        if (classInfo) {
+            result.setClass(classInfo);
+            return
+        }
+
+        const interfaceInfo = this.repo.getInterfaceByName(includes, word);
+        if (interfaceInfo) {
+            result.setInterface(interfaceInfo)
+            return;
+        }
+
+        const globalFunctionInfo = this.repo.getGlobalFunctionByName(includes, word);
+        if (globalFunctionInfo) {
+            result.setGlobalFunction(globalFunctionInfo)
+            return;
+        }
+
+        const globalVariableInfo = this.repo.getGlobalVariableByName(includes, word);
+        if (globalVariableInfo) {
+            result.setGlobalVariable(globalVariableInfo)
+            return;
+        }
+
+
     }
 }

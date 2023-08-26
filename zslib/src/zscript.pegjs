@@ -32,7 +32,8 @@ Chunk
     / _ & {return helper.isInterface()}  InterfaceMethodDeclaration
     / _ & {return helper.isInterface()}  PropertyDeclaration
     / _ & {return helper.isTopLevel()}   TypeDeclaration
-    / _ & {return helper.isMethod() || helper.isFunction()}     MethodExpression
+    / _ & {return helper.isMethod()}     MethodExpression
+    / _ & {return helper.isFunction()}   FunctionExpression
 
     // TODO: this consumes sime unknown input to avoid errors
     // Comment and implement!
@@ -161,6 +162,14 @@ MethodExpression
         {
             helper.trace(location(), `local ${vars.map(e => e[0])}, type ${type}`)
             unitInfo.addMethodVariables(type, vars, location(), helper.docBlock)
+        }
+
+FunctionExpression
+    = // &{ return ParserHelper.beginOfStatement(input, range())}
+    type:Type _ vars:Variables _ ";"
+        {
+            helper.trace(location(), `local ${vars.map(e => e[0])}, type ${type}`)
+            unitInfo.addFunctionVariables(type, vars, location(), helper.docBlock)
         }
 
 PropertyDeclaration
