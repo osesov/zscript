@@ -3,16 +3,21 @@ import * as vscode from 'vscode'
 import { CancellationToken, Definition, DefinitionProvider, LocationLink, TextDocument } from "vscode";
 import { ZsRepository } from "../../../zslib/src/zsRepository";
 import { Logger, logSystem } from "../../../zslib/src/logger";
-import { getWordAtCursor } from "./util";
 import { fromVscode, toVscode } from "../../../zslib/src/vscodeUtil";
 import { DefinitionSink, ZsDefinitions } from "../../../zslib/src/zsDefinitions";
 import { Position } from '../../../zslib/src/lang';
 
-class ZsDefinitonSink implements DefinitionSink
+class ZsDefinitionSink implements DefinitionSink
 {
     public items: vscode.DefinitionLink[] = []
+    private seen = new Set<string>
 
     add(fileName: string, start: Position, end: Position): void {
+        const key = `${fileName}:${start.line}:${start.column}..${end.line}:${end.column}`
+        if (this.seen.has(key))
+            return
+
+        this.seen.add(key)
         this.items.push({
             targetUri: vscode.Uri.file(fileName),
             targetRange: toVscode.range(start, end)
@@ -36,14 +41,14 @@ export class ZsDefinitionProvider implements DefinitionProvider
     async provideDefinition(document: TextDocument, position: vscode.Position, token: CancellationToken): Promise<Definition | LocationLink[]> // ProviderResult<Definition | LocationLink[]>
     {
         const fileName = document.uri.fsPath
-        const word = getWordAtCursor(document, position)
+        const word = fromVscode.getWordAtCursor(document, position)
         if (!word)
             return [];
 
         this.logger.info("Query definitions for {@word} in {file}", word, this.repo.stripPathPrefix(fileName));
 
         try {
-            const result = new ZsDefinitonSink
+            const result = new ZsDefinitionSink
             const unit = await this.repo.onDocumentAccess(document);
             if (!unit)
                 return [];

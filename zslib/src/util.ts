@@ -23,5 +23,11 @@ export function getPromise<T>(): { promise: Promise<T>, resolve: (e:T) => void, 
     return {
         promise, resolve, reject
     }
+}
 
+export interface Word
+{
+    word: string
+    prefix: string
+    offset: number
 }

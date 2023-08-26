@@ -5,8 +5,8 @@ import { window as Window } from 'vscode';
 import { FileAccessor } from './Debugger/ZsDebugAdapter';
 import { zsDebugInit } from './Debugger/ZsDebugExtension';
 import { zsLanguageService } from './LanguageServer/zsLanguageService';
-import { VSCodeSink } from './VscodeLogger';
-import { ConsoleSink, LogLevel, logSystem } from '../../zslib/src/logger';
+import { logSystem } from '../../zslib/src/logger';
+import { VSCodeSink } from '../../zslib/src/vscodeUtil';
 
 function pathToUri(path: string) {
 	try {
@@ -39,10 +39,10 @@ export function activate(context: vscode.ExtensionContext)
 	console.log("Activate zscript extension")
 	const outputChannel: vscode.LogOutputChannel = Window.createOutputChannel('Zodiac Script', { log: true });
 	logSystem.addSink(new VSCodeSink(outputChannel))
-	logSystem.addSink(new ConsoleSink())
+	// logSystem.addSink(new ConsoleSink())
 	// logSystem.setLevel(LogLevel.DEBUG)
 
-	context.subscriptions.push(vscode.commands.registerCommand('extension.zscript.getProgramName', config => {
+	context.subscriptions.push(vscode.commands.registerCommand('extension.zscript.getProgramName', _config => {
 		return vscode.window.showInputBox({
 			placeHolder: "Please enter the name of a file in the workspace folder",
 			value: "main.zs"

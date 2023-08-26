@@ -1,6 +1,7 @@
-import { ClassInfo, ContextTag, InterfaceInfo, UnitInfo } from './lang'
+import { ClassInfo, ContextTag, InterfaceInfo, UnitInfo, UnitInfoData } from './lang'
 import * as fs from 'fs'
 import * as path from 'path'
+import * as crypto from 'crypto'
 
 // parser
 import './zscript.pegjs'
@@ -10,8 +11,18 @@ import { assertUnreachable, getPromise } from './util'
 
 export interface ZsEnvironment
 {
+    version: string
     includeDirs: string[]
     stripPathPrefix: string[]
+    cacheDir?: string
+}
+
+export interface CacheFile
+{
+    version: string
+    fileName: string
+    mtime?: number
+    data: UnitInfoData
 }
 
 export class Queue
@@ -104,9 +115,15 @@ interface FileState
     updateTime: number
 }
 
+export interface DocumentText
+{
+    text: string
+    mtime: number
+}
+
 export interface FileAccessor
 {
-    getDocumentText(fileName: string): Promise<string>
+    getDocumentText(fileName: string): Promise<DocumentText>
 }
 
 export interface TextDocument
@@ -123,6 +140,7 @@ export class ZsRepository
     private loading = false
     private updateDelay = 10000
     private fileAccessor: FileAccessor
+    private writeQueue: Promise<void> = Promise.resolve()
 
     constructor(env: ZsEnvironment, fileAccessor: FileAccessor)
     {
@@ -136,10 +154,14 @@ export class ZsRepository
         this.env = env
     }
 
-    private findInclude(fileName: string): string | undefined
+    private findInclude(fileName: string, baseDir: string | null): string | undefined
     {
         if (fs.existsSync(fileName))
             return path.resolve(fileName)
+
+        // TODO: this must be applicable to non-system includes only
+        if (baseDir && fs.existsSync(path.resolve(baseDir, fileName)))
+            return path.resolve(baseDir, fileName)
 
         for(const dir of this.env.includeDirs) {
             const p = path.resolve(dir, fileName)
@@ -167,20 +189,97 @@ export class ZsRepository
     }
 
     // Loaders/parsers
-    private async updateFileInfoSafe(fileName: string, text: string, unit: FileState): Promise<UnitInfo|undefined>
+    private getCacheFileName(cacheDir: string, fileName: string): string
     {
+        const digest = crypto.createHash('sha1').update(fileName).digest('hex')
+        const cacheFile = path.resolve(cacheDir, digest);
+        return cacheFile
+    }
+
+    private async loadFromCache(fileName: string, doc: DocumentText): Promise<UnitInfo|undefined>
+    {
+        if (!this.env.cacheDir)
+            return undefined;
+
+        const cacheFileName = this.getCacheFileName(this.env.cacheDir, fileName)
+
+        if (!fs.existsSync(cacheFileName))
+            return undefined
+
         try {
-            const result: UnitInfo = parser.parse(text, {
+            // const stat = await fs.promises.stat(cacheFileName)
+            const data = await fs.promises.readFile(cacheFileName, 'utf-8')
+            const json = JSON.parse(data) as CacheFile;
+            if (!json.mtime) // including zero value
+                return undefined
+
+            if (doc.mtime && json.mtime !== doc.mtime)
+                return undefined
+
+            if (json.version !== this.env.version) // do not upgrade
+                return undefined;
+
+            return UnitInfo.fromJson(fileName, json.data)
+        }
+
+        catch(e: unknown) {
+            this.logger.error("Unable to load cache file {file}: {@error}", fileName, e)
+            return undefined;
+        }
+
+    }
+
+    private async saveFileCache(fileName: string, doc: DocumentText, unit: UnitInfo): Promise<void>
+    {
+        if (!this.env.cacheDir)
+            return;
+
+        this.writeQueue = this.writeQueue.then(async () => {
+            if (!this.env.cacheDir)
+                return;
+
+            const cacheFileName = this.getCacheFileName(this.env.cacheDir, fileName)
+            const cacheFileData: CacheFile = {
+                version: this.env.version,
+                fileName: fileName,
+                mtime: doc.mtime <= 0 ? undefined : doc.mtime,
+                data: unit.toJSON()
+            }
+
+            const result = JSON.stringify(cacheFileData, undefined, 4)
+            await fs.promises.mkdir(path.dirname(cacheFileName), {recursive: true})
+            return fs.promises.writeFile(cacheFileName, result)
+        });
+    }
+
+    private async updateFileInfoSafe(fileName: string, doc: DocumentText, unit: FileState): Promise<UnitInfo|undefined>
+    {
+        const getUnitInfo = async (): Promise<[boolean, UnitInfo]> => {
+            const result = await this.loadFromCache(fileName, doc)
+
+            if (result)
+                return [true, result]
+
+            return [false, parser.parse(doc.text, {
                 grammarSource: fileName,
                 fileName: fileName,
-            })
-            unit.state = 'opened'
-            unit.unitInfo = result
-            this.logger.info("Parsed {file}", this.stripPathPrefix(fileName))
-            unit.resolve(result)
+            })]
+        }
 
-            for (const it of Object.keys(result.include)) {
-                const n = this.findInclude(it);
+        try {
+            const [fromCache, unitInfo] = await getUnitInfo()
+
+            unit.state = 'opened'
+            unit.unitInfo = unitInfo
+            this.logger.info(`${fromCache ? 'loaded' : 'parsed'} {file}`, this.stripPathPrefix(fileName))
+            unit.resolve(unitInfo)
+
+            if (!fromCache)
+                this.saveFileCache(fileName, doc, unitInfo);
+
+            const baseName = path.dirname(fileName)
+            for (const it of Object.keys(unitInfo.include)) {
+                const n = this.findInclude(it, baseName);
                 if (!n) {
                     this.logger.warn("Unable to find include {file}. Update 'zscript.includeDir'.", it)
                     continue
@@ -202,8 +301,8 @@ export class ZsRepository
 
     private async loadFileSafe(fileName: string, unit: FileState)
     {
-        const text = await this.fileAccessor.getDocumentText(fileName);
-        await this.updateFileInfoSafe(fileName, text, unit);
+        const docInfo = await this.fileAccessor.getDocumentText(fileName);
+        await this.updateFileInfoSafe(fileName, docInfo, unit);
     }
 
     private doLoading()
@@ -268,7 +367,7 @@ export class ZsRepository
     {
         const { promise, resolve } = getPromise<UnitInfo|undefined>()
 
-        const fullName = this.findInclude(fileName);
+        const fullName = this.findInclude(fileName, null);
         if (!fullName) {
             this.logger.warn("File not found: {file}", fileName)
             return Promise.resolve(undefined)
@@ -362,7 +461,7 @@ export class ZsRepository
     {
         const queue = new Queue
         const result: UnitInfo[] = []
-        const fullName = this.findInclude(fileName)
+        const fullName = this.findInclude(fileName, null)
         if (!fullName)
             return result;
 
@@ -373,15 +472,12 @@ export class ZsRepository
             if (!includeFile)
                 continue
 
-            const fullIncludeName = this.findInclude(includeFile)
-            if (!fullIncludeName)
-                continue
-
-            const unit = await this.ensureFileLoaded(fullIncludeName, false);
+            const unit = await this.ensureFileLoaded(includeFile, false);
             if (unit) {
                 result.push(unit)
 
-                const newIncludes = Object.keys(unit.include).map( e=> this.findInclude(e))
+                const baseName = path.dirname(includeFile)
+                const newIncludes = Object.keys(unit.include).map( e=> this.findInclude(e, baseName))
                 queue.add(newIncludes)
             }
         }

@@ -29,6 +29,18 @@ module.exports = {
         "@typescript-eslint"
     ],
     "rules": {
-        "@typescript-eslint/no-namespace": "off"
+        "@typescript-eslint/no-namespace": "off",
+
+        // https://stackoverflow.com/a/64067915
+        // note you must disable the base rule as it can report incorrect errors
+        "no-unused-vars": "off",
+        "@typescript-eslint/no-unused-vars": [
+            "warn", // or "error"
+            {
+                "argsIgnorePattern": "^_",
+                "varsIgnorePattern": "^_",
+                "caughtErrorsIgnorePattern": "^_"
+            }
+        ],
     }
 }

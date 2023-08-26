@@ -21,3 +21,4 @@ node_modules
 build.js
 debug.md
 tsconfig.json
+sampleWorkspace/.zs-cache/

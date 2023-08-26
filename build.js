@@ -81,7 +81,10 @@ const pegjsPlugin = ({outFile, outDir}) => ({
                 format: "commonjs",
                 plugins: [tspegjs],
                 tspegjs: {
-                    customHeader: "import { UnitInfo, ParserHelper, CurrentContext } from './lang';"
+                    customHeader: [
+                        "import { UnitInfo } from './lang';",
+                        "import { ParserHelper, CurrentContext } from './ParserHelper';"
+                    ].join("\n")
                 }
             })
 

@@ -5,11 +5,13 @@
 }
 
 start
-    = Chunk* { return unitInfo; }
+    = ChunkStatement* { return unitInfo; }
+
+ChunkStatement
+    = (r:DocBlock {helper.setDocBlock(r)})* Chunk { helper.setDocBlock([])}
 
 Chunk
-    = r:DocBlock { helper.docBlock = r; }
-    / _ IfDirective
+    = _ IfDirective
     / _ IfdefDirective
     / _ IfndefDirective
     / _ ElifDirective
@@ -43,7 +45,7 @@ _
     )*
 
 DocBlock
-    = WhiteSpace? doc:BlockCommentToken { return [doc] }
+    = WhiteSpace? doc:BlockCommentToken { return doc }
     / WhiteSpace? doc:(LineCommentToken+) { return [...doc] }
 
 IfDirective
@@ -181,7 +183,7 @@ TypeDeclaration
         }
 
 ClassDeclaration
-    = ClassToken _ name:IdentToken _ impl:("implements" _ @IdList) ext:("extends" _ @IdList) _ &('{')
+    = ClassToken _ name:IdentToken _ impl:("implements" _ @IdList)? ext:("extends" _ @IdList)? _ &('{')
         {
             helper.trace(location(), `class ${name}, impl ${impl}, ext:${ext}`)
             helper.beginContext(CurrentContext.CLASS, name, location())
@@ -223,7 +225,7 @@ CustomType
     = (@"ptr" _ @IdentToken)
     / (@"shared" _ @IdentChar)
     / (@"this" _ @IdentToken)
-    / (m:"const" _ t:Type { return [m, ...t] })
+    / (m:"const" _ t:PrimitiveType { return [m, t] })
     / n:IdentToken { return [n]}
 
 PrimitiveType

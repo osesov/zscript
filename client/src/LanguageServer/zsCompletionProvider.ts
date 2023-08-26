@@ -1,7 +1,6 @@
 import * as vscode from 'vscode'
 import { ZsRepository } from '../../../zslib/src/zsRepository'
 import { Logger, logSystem } from '../../../zslib/src/logger';
-import { getWordAtCursor } from './util';
 import { fromVscode } from '../../../zslib/src/vscodeUtil';
 import { CompletionSink, ZsCompletions } from '../../../zslib/src/zsCompletions'
 import { CompletionItemKind } from 'vscode-languageclient';
@@ -31,9 +30,9 @@ export class ZsCompletionProvider implements vscode.CompletionItemProvider
         this.logger = logSystem.getLogger(ZsCompletionProvider)
     }
 
-    async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext): Promise<vscode.CompletionItem[]>
+    async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, _context: vscode.CompletionContext): Promise<vscode.CompletionItem[]>
     {
-        const word = getWordAtCursor(document, position)
+        const word = fromVscode.getWordAtCursor(document, position)
         if (!word)
             return [];
 

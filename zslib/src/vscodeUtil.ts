@@ -1,6 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as vscode from 'vscode'
 import * as fs from 'fs'
 import { Position } from './lang'
+import { LogEvent, LogLevel, LogMessageTemplate, LogSink, logSystem } from './logger';
+import { Word } from './util';
+import { DocumentText } from './zsRepository';
 
 export namespace fromVscode
 {
@@ -12,15 +16,44 @@ export namespace fromVscode
         }
     }
 
-    export async function getDocumentText(fileName: string): Promise<string>
+    export async function getDocumentText(fileName: string): Promise<DocumentText>
     {
+        const mtime = async () => await fs.promises.stat(fileName).then(e=>e.mtimeMs).catch(() => 0)
+
         for (const it of vscode.workspace.textDocuments) {
-            if (it.uri.fsPath === fileName)
-                return it.getText();
+            if (it.uri.fsPath === fileName) {
+                const result: DocumentText = {
+                    text: it.getText(),
+                    mtime: it.isUntitled || it.isDirty ? 0 : await mtime()
+                }
+                return result
+            }
         }
 
-        return fs.promises.readFile(fileName, 'utf-8')
+        const result: DocumentText = {
+            text: await fs.promises.readFile(fileName, 'utf-8'),
+            mtime: await mtime()
+        }
+
+        return result
     }
+
+    export function getWordAtCursor(document: vscode.TextDocument, position: vscode.Position): Word | undefined
+    {
+        const wordRange = document.getWordRangeAtPosition(position);
+
+        if (!wordRange)
+            return undefined
+
+        const word = document.getText(wordRange);
+        const offset = position.character - wordRange.start.character;
+        const prefix = word.substring(0, offset)
+
+        return {
+            word, prefix, offset
+        }
+    }
+
 }
 
 export namespace toVscode
@@ -31,5 +64,37 @@ export namespace toVscode
             new vscode.Position(begin.line - 1, begin.column - 1),
             new vscode.Position(end.line - 1, end.column - 1)
         )
+    }
+}
+
+export class VSCodeSink implements LogSink
+{
+    private outputChannel: vscode.LogOutputChannel
+    private template : LogMessageTemplate
+
+    private methods = new Map<LogLevel, (...args: any[]) => void>
+
+    constructor(outputChannel: vscode.LogOutputChannel, template ?: string)
+    {
+        this.outputChannel = outputChannel
+        this.template = logSystem.parseLogTemplate(template ?? "%n: %m")
+
+        this.methods = new Map<LogLevel, (...args: any[]) => void>(
+            [
+                [LogLevel.OUTPUT, this.outputChannel.appendLine],
+                [LogLevel.FATAL, this.outputChannel.error],
+                [LogLevel.ERROR, this.outputChannel.error],
+                [LogLevel.WARN, this.outputChannel.warn],
+                [LogLevel.INFO, this.outputChannel.info],
+                [LogLevel.DEBUG, this.outputChannel.debug],
+            ]
+        )
+    }
+
+    write(event: LogEvent): void {
+        const str = logSystem.renderEvent(event, this.template);
+        // this.outputChannel.appendLine(str);
+        const method = (this.methods.get(event.level) ?? this.outputChannel.info).bind(this.outputChannel)
+        method(str, ...event.properties._ ?? []);
     }
 }
