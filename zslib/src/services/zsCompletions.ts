@@ -1,6 +1,6 @@
-import { ClassInfo, ClassMethodInfo, ContextTag, GlobalFunction, InterfaceInfo, Position, UnitInfo } from "./lang";
-import { CancellationToken } from "./util";
-import { ZsRepository } from "./zsRepository";
+import { ClassInfo, ClassMethodInfo, ContextTag, GlobalFunction, InterfaceInfo, Position, UnitInfo } from "../lang/UnitInfo";
+import { CancellationToken } from "../util/util";
+import { ZsRepository } from "../lang/zsRepository";
 import {CompletionItem, CompletionItemKind} from 'vscode-languageclient/node'
 
 export interface ZsCompletionSink

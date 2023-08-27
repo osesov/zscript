@@ -1,8 +1,8 @@
 import * as vscode from 'vscode'
-import { ZsRepository } from '../../../zslib/src/zsRepository'
-import { Logger, logSystem } from '../../../zslib/src/logger';
-import { fromVscode } from '../../../zslib/src/vscodeUtil';
-import { ZsCompletionSink, ZsCompletions } from '../../../zslib/src/zsCompletions'
+import { ZsRepository } from '../../../zslib/src/lang/zsRepository'
+import { Logger, logSystem } from '../../../zslib/src/util/logger';
+import { fromVscode } from '../../../zslib/src/util/vscodeUtil';
+import { ZsCompletionSink, ZsCompletions } from '../../../zslib/src/services/zsCompletions'
 import { CompletionItemKind } from 'vscode-languageclient';
 
 class ZsCompletionSinkImpl implements ZsCompletionSink

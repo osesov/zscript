@@ -8,7 +8,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path'
-import { workspace as Workspace, window as Window, ExtensionContext, OutputChannel } from "vscode";
+import { workspace as Workspace, window as Window, ExtensionContext } from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 import { languageId } from '../common';
 
@@ -24,7 +24,7 @@ export namespace lsp {
 
 		// If the extension is launched in debug mode then the debug server options are used
 		// Otherwise the run options are used
-		let debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] };
+		const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] };
 
 		const serverOptions: ServerOptions = {
 			run: {

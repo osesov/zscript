@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+/* eslint-disable @typescript-eslint/no-var-requires */
 const path = require("path");
 const fs = require("fs");
 const esbuild = require("esbuild");
@@ -82,7 +84,7 @@ const pegjsPlugin = ({outFile, outDir}) => ({
                 plugins: [tspegjs],
                 tspegjs: {
                     customHeader: [
-                        "import { UnitInfo } from './lang';",
+                        "import { UnitInfoBuilder } from './UnitInfoBuilder';",
                         "import { ParserHelper, CurrentContext } from './ParserHelper';"
                     ].join("\n")
                 }

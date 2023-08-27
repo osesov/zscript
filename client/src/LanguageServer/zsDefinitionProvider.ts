@@ -1,11 +1,11 @@
 import * as vscode from 'vscode'
 
 import { CancellationToken, Definition, DefinitionProvider, LocationLink, TextDocument } from "vscode";
-import { ZsRepository } from "../../../zslib/src/zsRepository";
-import { Logger, logSystem } from "../../../zslib/src/logger";
-import { fromVscode, toVscode } from "../../../zslib/src/vscodeUtil";
-import { ZsDefinitionSink, ZsDefinitions } from "../../../zslib/src/zsDefinitions";
-import { Position } from '../../../zslib/src/lang';
+import { ZsRepository } from "../../../zslib/src/lang/zsRepository";
+import { Logger, logSystem } from "../../../zslib/src/util/logger";
+import { fromVscode, toVscode } from "../../../zslib/src/util/vscodeUtil";
+import { ZsDefinitionSink, ZsDefinitions } from "../../../zslib/src/services/zsDefinitions";
+import { Position } from '../../../zslib/src/lang/UnitInfo';
 
 class ZsDefinitionSinkImpl implements ZsDefinitionSink
 {

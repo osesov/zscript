@@ -5,8 +5,8 @@ import { window as Window } from 'vscode';
 import { FileAccessor } from './Debugger/ZsDebugAdapter';
 import { zsDebugInit } from './Debugger/ZsDebugExtension';
 import { zsLanguageService } from './LanguageServer/zsLanguageService';
-import { logSystem } from '../../zslib/src/logger';
-import { VSCodeSink } from '../../zslib/src/vscodeUtil';
+import { logSystem } from '../../zslib/src/util/logger';
+import { VSCodeSink } from '../../zslib/src/util/vscodeUtil';
 
 function pathToUri(path: string) {
 	try {

@@ -1,6 +1,7 @@
-import { ZsRepository } from "./zsRepository";
-import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, MethodArgument, Position, UnitInfo } from "./lang";
-import { CancellationToken } from "./util";
+import { getClassByName, getDefinesByName, getGlobalFunctionByName, getGlobalVariableByName, getInterfaceByName } from "../lang/InterUnitInfo";
+import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, MethodArgument, Position, UnitInfo } from "../lang/UnitInfo";
+import { ZsRepository } from "../lang/zsRepository";
+import { CancellationToken } from "../util/util";
 
 export interface ZsHoverSink
 {
@@ -108,7 +109,7 @@ export class ZsHover
             }
 
             for (const it of ctx.inherit) {
-                const ifInfo = this.repo.getInterfaceByName(includes, it)
+                const ifInfo = getInterfaceByName(includes, it)
                 if (ifInfo && checkInterface(ifInfo))
                     return true;
             }
@@ -139,13 +140,13 @@ export class ZsHover
             }
 
             for (const it of ctx.extends) {
-                const classInfo = this.repo.getClassByName(includes, it)
+                const classInfo = getClassByName(includes, it)
                 if (classInfo && checkClass(classInfo))
                     return true;
             }
 
             for (const it of ctx.implements) {
-                const ifInfo = this.repo.getInterfaceByName(includes, it)
+                const ifInfo = getInterfaceByName(includes, it)
                 if (ifInfo && checkInterface(ifInfo))
                     return true;
             }
@@ -177,31 +178,31 @@ export class ZsHover
             }
         }
 
-        const defineInfo = this.repo.getDefinesByName(includes, word);
+        const defineInfo = getDefinesByName(includes, word);
         if (defineInfo && defineInfo.length > 0) {
             result.setDefine(defineInfo);
             return;
         }
 
-        const classInfo = this.repo.getClassByName(includes, word);
+        const classInfo = getClassByName(includes, word);
         if (classInfo) {
             result.setClass(classInfo);
             return
         }
 
-        const interfaceInfo = this.repo.getInterfaceByName(includes, word);
+        const interfaceInfo = getInterfaceByName(includes, word);
         if (interfaceInfo) {
             result.setInterface(interfaceInfo)
             return;
         }
 
-        const globalFunctionInfo = this.repo.getGlobalFunctionByName(includes, word);
+        const globalFunctionInfo = getGlobalFunctionByName(includes, word);
         if (globalFunctionInfo) {
             result.setGlobalFunction(globalFunctionInfo)
             return;
         }
 
-        const globalVariableInfo = this.repo.getGlobalVariableByName(includes, word);
+        const globalVariableInfo = getGlobalVariableByName(includes, word);
         if (globalVariableInfo) {
             result.setGlobalVariable(globalVariableInfo)
             return;

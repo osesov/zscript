@@ -1,6 +1,6 @@
 /* eslint-disable */
 
-import { UnitInfo } from './lang';
+import { UnitInfoBuilder } from './UnitInfoBuilder';
 import { ParserHelper, CurrentContext } from './ParserHelper';
 
 
@@ -9960,7 +9960,7 @@ peg$parseOperator() {
 // @ts-ignore
     const helper = new ParserHelper
 // @ts-ignore
-    const unitInfo = new UnitInfo(options.fileName, options.fullFileName)
+    const unitInfo = new UnitInfoBuilder(options.fileName, options.fullFileName)
 
 // @ts-ignore
   peg$result = peg$startRuleFunction();

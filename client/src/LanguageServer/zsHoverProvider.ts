@@ -1,10 +1,10 @@
 import * as vscode from 'vscode'
-import { ZsRepository } from '../../../zslib/src/zsRepository'
-import { Logger, logSystem } from '../../../zslib/src/logger';
-import { fromVscode, toVscode } from '../../../zslib/src/vscodeUtil';
-import { ZsHoverSink, ZsHover } from '../../../zslib/src/zsHover'
-import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, DefineInfo, DocBlock, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, MethodArgument, NameAndType, Type } from '../../../zslib/src/lang';
+import { ZsRepository } from '../../../zslib/src/lang/zsRepository'
+import { Logger, logSystem } from '../../../zslib/src/util/logger';
+import { fromVscode, toVscode } from '../../../zslib/src/util/vscodeUtil';
+import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, DefineInfo, DocBlock, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, MethodArgument, NameAndType, Type } from '../../../zslib/src/lang/UnitInfo';
 import { languageId } from '../common';
+import { ZsHover, ZsHoverSink } from '../../../zslib/src/services/zsHover'
 
 class ZsHoverSinkImpl implements ZsHoverSink
 {
@@ -46,7 +46,10 @@ class ZsHoverSinkImpl implements ZsHoverSink
 
         if (doc.length > 0) {
             ms.appendMarkdown('---\n')
-            doc.forEach(e=>ms.appendText(e))
+            doc.forEach(e => {
+                ms.appendText(e)
+                ms.appendMarkdown('\n\n')
+            })
         }
         return ms;
     }

@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as vscode from 'vscode'
 import * as fs from 'fs'
-import { Position } from './lang'
+import { Position } from '../lang/UnitInfo'
 import { LogEvent, LogLevel, LogMessageTemplate, LogSink, logSystem } from './logger';
 import { Word } from './util';
-import { DocumentText } from './zsRepository';
+import { DocumentText } from '../lang/zsRepository';
 
 export namespace fromVscode
 {

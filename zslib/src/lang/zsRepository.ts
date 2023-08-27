@@ -1,4 +1,4 @@
-import { ClassInfo, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, UnitInfo, UnitInfoData } from './lang'
+import { ClassInfo, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, UnitInfo, UnitInfoData } from './UnitInfo'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
@@ -6,8 +6,9 @@ import * as crypto from 'crypto'
 // parser
 import './zscript.pegjs'
 import * as parser from './zscript-parse'
-import { Logger, logSystem } from './logger'
-import { assertUnreachable, getPromise } from './util'
+import { Logger, logSystem } from '../util/logger'
+import { assertUnreachable, getPromise } from '../util/util'
+import { Queue } from '../util/queue'
 
 export interface ZsEnvironment
 {
@@ -25,84 +26,6 @@ export interface CacheFile
     data: UnitInfoData
 }
 
-export class Queue
-{
-    private seen: Set<string> = new Set
-    private queue: string[] = []
-
-    public add(s: string|undefined): boolean
-    public add(...s: (string|undefined)[]): boolean
-    public add(s: (string|undefined)[]): boolean
-    public add(s: (string|undefined)[]|(string|undefined)): boolean
-    {
-        let added = false
-        if (!s)
-            return false;
-
-        if (typeof s === "string")
-            s = [s]
-
-        for(const it of s) {
-            if (!it)
-                continue
-            if (this.seen.has(it))
-                continue
-
-            this.seen.add(it)
-            this.queue.push(it)
-            added = true
-        }
-
-        return added
-    }
-
-    public reset(): void
-    {
-        if (this.queue.length > 0)
-            throw Error("queue is not empty!")
-        this.seen.clear()
-    }
-
-    public get empty(): boolean
-    {
-        return this.queue.length === 0
-    }
-
-    public peek(): string
-    {
-        return this.queue[0]
-    }
-
-    public next(): string
-    {
-        const result = this.queue.shift()
-        if (!result)
-            throw Error("queue is empty");
-
-        return result;
-    }
-
-    public *items()
-    {
-        while (!this.empty) {
-            const it = this.queue.shift()
-            if (!it)
-                continue;
-
-            yield it;
-        }
-    }
-
-    public requeue(str: string[])
-    {
-        str.forEach( e => {
-            if (!this.seen.has(e))
-                throw Error("Unexpected requeue item: " + e);
-
-            this.queue.push(e)
-        })
-    }
-}
 
 interface FileState
 {
@@ -412,50 +335,6 @@ export class ZsRepository
 
     // ### Find out some properties for loaded classes
 
-    // Get inheritance list given a class or interface (both extends and implements)
-    public async getInheritance(start: ClassInfo|InterfaceInfo, fileName: string): Promise<(ClassInfo|InterfaceInfo)[]>
-    {
-        const result: (ClassInfo|InterfaceInfo)[] = []
-        const includes = await this.getIncludeQueue(fileName)
-        const looking = new Set<string>
-        const loaded = new Set<string>
-
-        looking.add(start.name);
-
-        while (looking.size > 0) {
-            let somethingChanged = false
-
-            for(const it of includes) {
-                if (looking.size === 0)
-                    break;
-                for (const name of looking) {
-                    const e = ((): (ClassInfo|InterfaceInfo|undefined) => it.interfaces[name] ?? it.classes[name])()
-                    if (!e)
-                        break;
-                    result.push(e);
-                    looking.delete(name);
-                    loaded.add(name);
-                    somethingChanged = true
-
-                    switch (e.context) {
-                    case ContextTag.CLASS:
-                        e.implements.forEach( p => loaded.has(p) || looking.add(p))
-                        e.extends.forEach( p => loaded.has(p) || looking.add(p))
-                        break
-
-                    case ContextTag.INTERFACE:
-                        e.inherit.forEach( p => loaded.has(p) || looking.add(p))
-                        break
-                    }
-                }
-            }
-
-            if (!somethingChanged)
-                break;
-        }
-        return result;
-    }
-
     // Get list of includes, starting from given file, going width-depth
     public async getIncludeQueue(fileName: string): Promise<UnitInfo[]>
     {
@@ -483,56 +362,6 @@ export class ZsRepository
         }
 
         return result;
-    }
-
-    public getDefinesByName(includes: UnitInfo[], name: string): DefineInfo[] | undefined
-    {
-        for (const it of includes) {
-            if (name in it.defines)
-                return it.defines[name]
-        }
-
-        return undefined
-    }
-
-    public getClassByName(includes: UnitInfo[], className: string): ClassInfo | undefined
-    {
-        for (const it of includes) {
-            if (className in it.classes)
-                return it.classes[className]
-        }
-
-        return undefined
-    }
-
-    public getInterfaceByName(includes: UnitInfo[], ifName: string): InterfaceInfo | undefined
-    {
-        for (const it of includes) {
-            if (ifName in it.interfaces)
-                return it.interfaces[ifName]
-        }
-
-        return undefined
-    }
-
-    public getGlobalFunctionByName(includes: UnitInfo[], ifName: string): GlobalFunction | undefined
-    {
-        for (const it of includes) {
-            if (ifName in it.globalFunctions)
-                return it.globalFunctions[ifName]
-        }
-
-        return undefined
-    }
-
-    public getGlobalVariableByName(includes: UnitInfo[], ifName: string): GlobalVariable | undefined
-    {
-        for (const it of includes) {
-            if (ifName in it.globalVariables)
-                return it.globalVariables[ifName]
-        }
-
-        return undefined
     }
 
     /// document maintenance

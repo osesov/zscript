@@ -1,9 +1,9 @@
 // import './zscript.pegjs'
-import * as parser from './zscript-parse'
+import * as parser from './lang/zscript-parse'
 import * as path from 'path'
 import * as fs from 'fs'
-import { UnitInfo } from './lang'
-import { ConsoleSink, LogLevel, logSystem } from './logger'
+import { UnitInfo } from './lang/UnitInfo'
+import { ConsoleSink, LogLevel, logSystem } from './util/logger'
 
 const topDir = '/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start/scripts'
 // const fileName = "gui/tcui/guide/GuideChannelListItem.zs"

@@ -11,10 +11,10 @@ import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
 
-import { ZsEnvironment, createRepository } from '../../zslib/src/zsRepository'
+import { ZsEnvironment, createRepository } from '../../zslib/src/lang/zsRepository'
 
 // import { UnitInfo } from './lang';
-import { ConsoleSink } from '../../zslib/src/logger';
+import { ConsoleSink } from '../../zslib/src/util/logger';
 
 // Creates the LSP connection
 const connection = createConnection(ProposedFeatures.all);

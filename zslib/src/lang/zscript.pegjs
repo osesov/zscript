@@ -1,7 +1,7 @@
 /* Simplified ZS grammar */
 {
     const helper = new ParserHelper
-    const unitInfo = new UnitInfo(options.fileName, options.fullFileName)
+    const unitInfo = new UnitInfoBuilder(options.fileName, options.fullFileName)
 }
 
 start

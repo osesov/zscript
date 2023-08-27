@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { languageId } from '../common'
-import { ZsRepository } from '../../../zslib/src/zsRepository'
-import { logSystem } from '../../../zslib/src/logger';
+import { ZsRepository } from '../../../zslib/src/lang/zsRepository'
+import { logSystem } from '../../../zslib/src/util/logger';
 
 export class ZsDocumentMonitor implements vscode.Disposable
 {

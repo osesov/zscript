@@ -3,12 +3,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path'
 import { ZsCompletionProvider } from "./zsCompletionProvider";
-import { FileAccessor, ZsEnvironment, createRepository } from '../../../zslib/src/zsRepository';
+import { FileAccessor, ZsEnvironment, createRepository } from '../../../zslib/src/lang/zsRepository';
 import { ZsDefinitionProvider } from './zsDefinitionProvider';
 import { languageId } from '../common';
 import { ZsDocumentMonitor } from './zsDocumentMonitor';
-import { Logger, logSystem } from '../../../zslib/src/logger';
-import { fromVscode } from '../../../zslib/src/vscodeUtil';
+import { Logger, logSystem } from '../../../zslib/src/util/logger';
+import { fromVscode } from '../../../zslib/src/util/vscodeUtil';
 
 import {default as subst} from 'vscode-variables'
 import { ZsHoverProvider } from './zsHoverProvider';

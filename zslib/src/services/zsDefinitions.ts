@@ -1,6 +1,7 @@
-import { ClassInfo, ClassMethodInfo, ContextTag, GlobalFunction, InterfaceInfo, Position, UnitInfo } from "./lang";
-import { CancellationToken } from "./util";
-import { ZsRepository } from "./zsRepository";
+import { getInheritance } from "../lang/InterUnitInfo";
+import { ClassInfo, ClassMethodInfo, ContextTag, GlobalFunction, InterfaceInfo, Position, UnitInfo } from "../lang/UnitInfo";
+import { CancellationToken } from "../util/util";
+import { ZsRepository } from "../lang/zsRepository";
 
 export interface ZsDefinitionSink
 {
@@ -138,7 +139,8 @@ export class ZsDefinitions
 
     private async getInheritDefinitions(result: ZsDefinitionSink, fileName: string, word: string, classInfo: ClassInfo|InterfaceInfo, token: CancellationToken): Promise<void>
     {
-        const inherit = await this.repo.getInheritance(classInfo, fileName)
+        const includes = await this.repo.getIncludeQueue(fileName);
+        const inherit = await getInheritance(includes, classInfo)
         for (const e of inherit) {
             switch(e.context) {
             case ContextTag.CLASS:

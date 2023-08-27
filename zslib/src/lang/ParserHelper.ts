@@ -1,7 +1,8 @@
 import * as parser from "./zscript-parse"
 import { FileRange } from "./zscript-parse"
-import { logSystem } from "./logger"
-import { DocBlock, UnitInfo } from "./lang"
+import { logSystem } from "../util/logger"
+import { DocBlock, UnitInfo } from "./UnitInfo"
+import { UnitInfoBuilder } from "./UnitInfoBuilder"
 
 export enum CurrentContext
 {
@@ -216,7 +217,7 @@ export class ParserHelper
         }
     }
 
-    closeCurly(unitInfo: UnitInfo, location: FileRange): string
+    closeCurly(unitInfo: UnitInfoBuilder, location: FileRange): string
     {
         const context = this.topContext();
         const condition = this.topCondition();
