@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { ZsRepository } from '../../../zslib/src/lang/zsRepository'
 import { Logger, logSystem } from '../../../zslib/src/util/logger';
 import { fromVscode, toVscode } from '../../../zslib/src/util/vscodeUtil';
-import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, DefineInfo, DocBlock, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, MethodArgument, NameAndType, Type } from '../../../zslib/src/lang/UnitInfo';
+import { ClassInfo, ClassMethodInfo, LocalVariable, ClassVariable, DefineInfo, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, NameAndType, Type, TypeInfo } from '../../../zslib/src/lang/UnitInfo';
 import { languageId } from '../common';
 import { ZsHover, ZsHoverSink } from '../../../zslib/src/services/zsHover'
 
@@ -10,14 +10,14 @@ class ZsHoverSinkImpl implements ZsHoverSink
 {
     public hover: vscode.Hover | undefined
 
-    private formatVariable(className: ClassInfo|InterfaceInfo|undefined, name: string, ret: Type)
+    private formatVariable(parent: ClassInfo|InterfaceInfo|undefined, name: string, ret: Type)
     {
         let result = ""
 
         result += ret.join(' ') + ' ';
 
-        if (className)
-            result += className + '.'
+        if (parent)
+            result += parent.name + '::'
 
         result += name;
         return result;
@@ -30,7 +30,7 @@ class ZsHoverSinkImpl implements ZsHoverSink
         result += ret.join(' ') + ' ';
 
         if (parent)
-            result += parent.name + '.'
+            result += parent.name + '::'
 
         result += name + '(';
         result += args.map(e => e.type.join(' ') + ' ' + e.name).join(', ')
@@ -63,13 +63,24 @@ class ZsHoverSinkImpl implements ZsHoverSink
         this.hover = new vscode.Hover(this.format("class variable", title, info.docBlock))
     }
 
-    setArgument(info: MethodArgument): void
+    setArgument(info: Argument): void
     {
         if (this.hover)
             return
 
         const title = this.formatVariable(undefined, info.name, info.type)
         this.hover = new vscode.Hover(this.format("argument", title, []))
+    }
+
+    setLocalVariable(info: LocalVariable): void {
+        if (this.hover)
+            return
+
+        const title = this.formatVariable(undefined, info.name, info.type)
+        this.hover = new vscode.Hover(
+            this.format("local variable", title, info.docBlock),
+            toVscode.range(info.begin, info.end)
+        )
     }
 
     setClassMethod(info: ClassMethodInfo): void
@@ -81,18 +92,6 @@ class ZsHoverSinkImpl implements ZsHoverSink
 
         this.hover = new vscode.Hover(
             this.format("method", title, info.docBlock),
-            toVscode.range(info.begin, info.end)
-        )
-    }
-
-    setClassMethodVariable(info: ClassMethodVariable): void
-    {
-        if (this.hover)
-            return
-
-        const title = this.formatVariable(undefined, info.name, info.type)
-        this.hover = new vscode.Hover(
-            this.format("method variable", title, info.docBlock),
             toVscode.range(info.begin, info.end)
         )
     }
@@ -109,7 +108,6 @@ class ZsHoverSinkImpl implements ZsHoverSink
         )
     }
 
-
     setGlobalFunction(info: GlobalFunction): void
     {
         if (this.hover)
@@ -118,18 +116,6 @@ class ZsHoverSinkImpl implements ZsHoverSink
         const title = this.formatProto(undefined, info.name, info.type, info.args)
         this.hover = new vscode.Hover(
             this.format("function", title, info.docBlock),
-            toVscode.range(info.begin, info.end)
-        )
-    }
-
-    setGlobalFunctionVariable(info: GlobalFunctionVariable): void
-    {
-        if (this.hover)
-            return
-
-        const title = this.formatVariable(undefined, info.name, info.type)
-        this.hover = new vscode.Hover(
-            this.format("local variable", title, info.docBlock),
             toVscode.range(info.begin, info.end)
         )
     }
@@ -182,17 +168,29 @@ class ZsHoverSinkImpl implements ZsHoverSink
         )
     }
 
-    setDefine(info: DefineInfo[]): void {
+    setDefine(info: DefineInfo): void {
         if (this.hover)
             return
 
         const result = new vscode.MarkdownString
-        info.forEach( define => {
-            const line = this.format("define", define.name, define.docBlock)
+        info.definitions.forEach( define => {
+            const line = this.format("define", info.name, define.docBlock)
             result.appendMarkdown(line.value)
         })
 
         this.hover = new vscode.Hover(result);
+    }
+
+    setType(info: TypeInfo): void
+    {
+        if (this.hover)
+            return
+
+        const title = `${info.name}: ${info.type.join(' ')}`;
+        this.hover = new vscode.Hover(
+            this.format("type", title, info.docBlock),
+            toVscode.range(info.begin, info.end)
+        )
     }
 
 }

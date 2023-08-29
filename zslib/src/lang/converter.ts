@@ -1,4 +1,4 @@
-import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, GlobalFunction, GlobalFunctionVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Span, UnitInfo, UnitInfoData } from "./UnitInfo"
+import { ClassInfo, ClassMethodInfo, LocalVariable, ClassVariable, GlobalFunction, GlobalFunctionVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Span, UnitInfo, UnitInfoData } from "./UnitInfo"
 
 export namespace json_converter
 {
@@ -46,14 +46,14 @@ export namespace json_converter
         const classes = Object.keys(data)
         const result: UnitInfoData["classes"] = {}
 
-        const localToJson = (info: ClassMethodVariable) : ClassMethodVariable => {
+        const localToJson = (info: LocalVariable) : LocalVariable => {
 
-            const newInfo: Partial<ClassMethodVariable> = {
+            const newInfo: Partial<LocalVariable> = {
                 ...info,
                 parent: undefined,
             }
 
-            return newInfo as ClassMethodVariable
+            return newInfo as LocalVariable
         }
 
         const methodToJson = (info: ClassMethodInfo) : ClassMethodInfo => {

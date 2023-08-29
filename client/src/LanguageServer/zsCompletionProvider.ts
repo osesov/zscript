@@ -4,16 +4,25 @@ import { Logger, logSystem } from '../../../zslib/src/util/logger';
 import { fromVscode } from '../../../zslib/src/util/vscodeUtil';
 import { ZsCompletionSink, ZsCompletions } from '../../../zslib/src/services/zsCompletions'
 import { CompletionItemKind } from 'vscode-languageclient';
+import { DocBlock } from '../../../zslib/src/lang/UnitInfo';
 
 class ZsCompletionSinkImpl implements ZsCompletionSink
 {
     public list: vscode.CompletionList = new vscode.CompletionList(undefined, false)
     private seen = new Set<string>
 
-    add(label: string, kind: CompletionItemKind/*, options?: CompletionItem*/): void {
+    add(label: string, kind: CompletionItemKind, detail: string | undefined, doc: DocBlock): void {
         if (!this.seen.has(label)) {
             this.seen.add(label)
-            this.list.items.push( new vscode.CompletionItem(label, kind))
+            const item = new vscode.CompletionItem(label, kind);
+
+            if (detail)
+                item.detail = detail;
+
+            if (doc.length > 0) {
+                item.documentation = doc.join('\n')
+            }
+            this.list.items.push(item)
         }
     }
 }

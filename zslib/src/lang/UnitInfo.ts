@@ -4,10 +4,19 @@ import { json_converter } from "./converter"
 export enum ContextTag
 {
     TOP_LEVEL,
+    INCLUDE,
+    DEFINE,
     INTERFACE,
+    INTERFACE_PROPERTY,
+    INTERFACE_METHOD,
     CLASS,
-    METHOD,
-    FUNCTION
+    CLASS_VARIABLE,
+    CLASS_METHOD,
+    GLOBAL_FUNCTION,
+    GLOBAL_VARIABLE,
+    ARGUMENT,
+    LOCAL_VARIABLE,
+    TYPE
 }
 
 export interface Position
@@ -30,38 +39,36 @@ export interface NameAndType
     type: Type
 }
 
-export interface Include
+export interface Include extends WithContext
 {
+    context: ContextTag.INCLUDE
     system: boolean
     position: Position
 }
 
 export interface ClassVariable extends NameAndType
 {
+    context: ContextTag.CLASS_VARIABLE
+
     begin: Position
     end: Position
     docBlock: DocBlock
     parent: ClassInfo
 }
 
-export interface ClassMethodVariable extends NameAndType
+export interface LocalVariable extends WithContext, NameAndType
 {
+    context: ContextTag.LOCAL_VARIABLE
     begin: Position
     end: Position
     docBlock: DocBlock
     parent: ClassMethodInfo
 }
 
-export interface GlobalFunctionVariable extends NameAndType
+export interface Argument extends WithContext
 {
-    begin: Position
-    end: Position
-    docBlock: DocBlock
-    parent: GlobalFunction
-}
+    context: ContextTag.ARGUMENT
 
-export interface MethodArgument
-{
     type: Type
     name: string
     begin: Position
@@ -83,19 +90,20 @@ export interface ClassInfo extends WithContext
 
 export interface ClassMethodInfo extends WithContext, NameAndType
 {
-    context: ContextTag.METHOD
+    context: ContextTag.CLASS_METHOD
     begin: Position
     end: Position
     parent: ClassInfo
     visibility: string
-    args: MethodArgument[]
-    variables: ClassMethodVariable[]
+    args: Argument[]
+    variables: LocalVariable[]
     docBlock: DocBlock
 }
 
 
-export interface TypeInfo extends NameAndType
+export interface TypeInfo extends WithContext, NameAndType
 {
+    context: ContextTag.TYPE
     begin: Position
     end: Position
     docBlock: DocBlock
@@ -103,6 +111,7 @@ export interface TypeInfo extends NameAndType
 
 export interface InterfaceMethod extends NameAndType
 {
+    context: ContextTag.INTERFACE_METHOD
     begin: Position
     end: Position
     args: NameAndType[]
@@ -112,6 +121,7 @@ export interface InterfaceMethod extends NameAndType
 
 export interface InterfaceProperty extends NameAndType
 {
+    context: ContextTag.INTERFACE_PROPERTY
     begin: Position
     end: Position
     docBlock: DocBlock
@@ -122,7 +132,7 @@ export interface InterfaceInfo extends WithContext
 {
     context: ContextTag.INTERFACE
     name: string
-    inherit: string[]
+    extends: string[]
     begin: Position
     end: Position
     methods: InterfaceMethod[]
@@ -133,14 +143,19 @@ export interface InterfaceInfo extends WithContext
 
 export interface DefineInfo
 {
+    context: ContextTag.DEFINE
     name: string
-    begin: Position,
-    end: Position,
-    docBlock: DocBlock
+
+    definitions: {
+        begin: Position,
+        end: Position,
+        docBlock: DocBlock
+    }[]
 }
 
 export interface GlobalVariable extends NameAndType
 {
+    context: ContextTag.GLOBAL_VARIABLE
     begin: Position
     end: Position
     docBlock: DocBlock
@@ -148,11 +163,11 @@ export interface GlobalVariable extends NameAndType
 
 export interface GlobalFunction extends WithContext, NameAndType
 {
-    context: ContextTag.FUNCTION
+    context: ContextTag.GLOBAL_FUNCTION
     begin: Position
     end: Position
-    args: MethodArgument[]
-    variables: GlobalFunctionVariable[]
+    args: Argument[]
+    variables: LocalVariable[]
     docBlock: DocBlock
 }
 
@@ -164,7 +179,7 @@ export interface UnitInfoData
     readonly classes: { [className: string]: ClassInfo }
     readonly interfaces: { [ifName: string]: InterfaceInfo }
     readonly types: { [name: string]: TypeInfo }
-    readonly defines: { [name: string]: DefineInfo[] }
+    readonly defines: { [name: string]: DefineInfo }
     readonly globalVariables: { [name: string]: GlobalVariable }
     readonly globalFunctions: { [name: string]: GlobalFunction }
 }

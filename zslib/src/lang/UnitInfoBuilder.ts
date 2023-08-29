@@ -1,4 +1,4 @@
-import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Span, Type, TypeInfo, UnitInfo } from "./UnitInfo";
+import { ClassInfo, ClassMethodInfo, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Span, Type, TypeInfo, UnitInfo } from "./UnitInfo";
 import { FileRange } from "./zscript-parse";
 
 export class UnitInfoBuilder extends UnitInfo
@@ -23,6 +23,7 @@ export class UnitInfoBuilder extends UnitInfo
         }
 
         this.includes[name].push({
+            context: ContextTag.INCLUDE,
             system: system,
             position: location.start
         })
@@ -52,7 +53,7 @@ export class UnitInfoBuilder extends UnitInfo
         const classInfo: InterfaceInfo = {
             context: ContextTag.INTERFACE,
             name: name,
-            inherit: inherit,
+            extends: inherit,
             begin: location.start,
             end: location.end,
             methods: [],
@@ -71,6 +72,7 @@ export class UnitInfoBuilder extends UnitInfo
         const currentInterface = this.getCurrentInterface()
 
         const info : InterfaceMethod = {
+            context: ContextTag.INTERFACE_METHOD,
             name: name,
             type: type,
             begin: location.start,
@@ -87,6 +89,7 @@ export class UnitInfoBuilder extends UnitInfo
         const currentInterface = this.getCurrentInterface()
 
         const info : InterfaceProperty = {
+            context: ContextTag.INTERFACE_PROPERTY,
             name: name,
             type: type,
             begin: location.start,
@@ -102,6 +105,7 @@ export class UnitInfoBuilder extends UnitInfo
         const currentInterface = this.getCurrentInterface()
 
         const info : InterfaceProperty = {
+            context: ContextTag.INTERFACE_PROPERTY,
             name: name,
             type: type,
             begin: location.start,
@@ -117,13 +121,14 @@ export class UnitInfoBuilder extends UnitInfo
     {
         const currentClass: ClassInfo = this.getCurrentClass()
         const methodInfo: ClassMethodInfo = {
-            context: ContextTag.METHOD,
+            context: ContextTag.CLASS_METHOD,
             begin: location.start,
             end: location.end,
             name: name,
             type: type,
             visibility: visibility,
             args: args.map( e=> ({
+                context: ContextTag.ARGUMENT,
                 type: e[0],
                 name: e[1],
                 begin: e[2].start,
@@ -144,7 +149,8 @@ export class UnitInfoBuilder extends UnitInfo
         const currentClass = this.getCurrentMethod(location)
 
         for (const [name, location] of names) {
-            const info: ClassMethodVariable = {
+            const info: LocalVariable = {
+                context: ContextTag.LOCAL_VARIABLE,
                 begin: location.start,
                 end: location.end,
                 name: name,
@@ -179,6 +185,7 @@ export class UnitInfoBuilder extends UnitInfo
     {
         const currentClass: ClassInfo = this.getCurrentClass()
         const info: ClassVariable = {
+            context: ContextTag.CLASS_VARIABLE,
             begin: location.start,
             end: location.end,
             name: name,
@@ -194,6 +201,7 @@ export class UnitInfoBuilder extends UnitInfo
     {
         for (const [name, location] of names) {
             const info: GlobalVariable = {
+                context: ContextTag.GLOBAL_VARIABLE,
                 begin: location.start,
                 end: location.end,
                 name: name,
@@ -208,12 +216,13 @@ export class UnitInfoBuilder extends UnitInfo
     public beginGlobalFunction(type: Type, name: string, args: [Type,string,FileRange][], location: FileRange, docBlock: DocBlock)
     {
         const methodInfo: GlobalFunction = {
-            context: ContextTag.FUNCTION,
+            context: ContextTag.GLOBAL_FUNCTION,
             begin: location.start,
             end: location.end,
             name: name,
             type: type,
             args: args.map( e=> ({
+                context: ContextTag.ARGUMENT,
                 type: e[0],
                 name: e[1],
                 begin: e[2].start,
@@ -230,10 +239,15 @@ export class UnitInfoBuilder extends UnitInfo
 
     public addDefine(name: string, location: FileRange, docBlock: DocBlock)
     {
-        if (this.defines[name] === undefined)
-            this.defines[name] = []
-        this.defines[name].push({
-            name: name,
+        if (this.defines[name] === undefined) {
+            this.defines[name] = {
+                context: ContextTag.DEFINE,
+                name: name,
+                definitions: []
+            }
+        }
+
+        this.defines[name].definitions.push({
             begin: location.start,
             end: location.end,
             docBlock: docBlock
@@ -243,6 +257,7 @@ export class UnitInfoBuilder extends UnitInfo
     public addType(name: string, def: string, location: FileRange, docBlock: DocBlock): void
     {
         const typeInfo: TypeInfo = {
+            context: ContextTag.TYPE,
             name: name,
             type: [def],
             begin: location.start,
@@ -293,7 +308,7 @@ export class UnitInfoBuilder extends UnitInfo
     {
         const t = this.stack[ this.stack.length - 1];
 
-        if (t.context === ContextTag.METHOD)
+        if (t.context === ContextTag.CLASS_METHOD)
             return t
 
         throw Error(`No current method: ${location.start.line}...${location.end.line}`)
@@ -303,7 +318,7 @@ export class UnitInfoBuilder extends UnitInfo
     {
         const t = this.stack[ this.stack.length - 1];
 
-        if (t.context === ContextTag.FUNCTION)
+        if (t.context === ContextTag.GLOBAL_FUNCTION)
             return t
 
         throw Error(`No current function: ${location.start.line}...${location.end.line}`)

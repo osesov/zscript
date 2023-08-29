@@ -1,4 +1,5 @@
-import { ClassInfo, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, UnitInfo } from "./UnitInfo";
+import { it } from "node:test";
+import { Argument, ClassInfo, ClassMethodInfo as ClassMethod, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, Include, ClassMethodInfo } from "./UnitInfo";
 
 // Get inheritance list given a class or interface (both extends and implements)
 export function getInheritance(includes: UnitInfo[], start: ClassInfo|InterfaceInfo): (ClassInfo|InterfaceInfo)[]
@@ -31,7 +32,7 @@ export function getInheritance(includes: UnitInfo[], start: ClassInfo|InterfaceI
                     break
 
                 case ContextTag.INTERFACE:
-                    e.inherit.forEach( p => loaded.has(p) || looking.add(p))
+                    e.extends.forEach( p => loaded.has(p) || looking.add(p))
                     break
                 }
             }
@@ -43,7 +44,7 @@ export function getInheritance(includes: UnitInfo[], start: ClassInfo|InterfaceI
     return result;
 }
 
-export function getDefinesByName(includes: UnitInfo[], name: string): DefineInfo[] | undefined
+export function getDefinesByName(includes: UnitInfo[], name: string): DefineInfo | undefined
 {
     for (const it of includes) {
         if (name in it.defines)
@@ -91,4 +92,313 @@ export function getGlobalVariableByName(includes: UnitInfo[], ifName: string): G
     }
 
     return undefined
+}
+
+export type ScopeSymbolsTypes = Argument | LocalVariable
+                                | InterfaceInfo | InterfaceMethod | InterfaceProperty
+                                | ClassInfo | ClassMethod | ClassVariable | LocalVariable
+                                | DefineInfo | GlobalFunction | GlobalVariable
+                                | TypeInfo
+
+export function *getScopeSymbols(includes: UnitInfo[], position: Position, predicate: (e: ScopeSymbolsTypes) => boolean): Generator<ScopeSymbolsTypes, unknown>
+{
+    if (includes.length === 0)
+        return
+
+    const main: UnitInfo = includes[0]
+    const context = main.getContext(position).reverse()
+    const seenClass = new Set<ClassInfo>
+    const seenInterface = new Set<InterfaceInfo>
+
+    const visitClassMethod = function* (ctx: ClassMethod): Generator<ClassMethod | Argument | LocalVariable> {
+        if (predicate(ctx))
+            yield ctx
+
+        for (const it of ctx.variables.filter(predicate))
+            yield it;
+
+        for (const it of ctx.args.filter(predicate))
+            yield it;
+    }
+
+    const visitGlobalFunction = function *(ctx: GlobalFunction): Generator<GlobalFunction | Argument | LocalVariable> {
+        if (predicate(ctx))
+            yield ctx
+
+        for (const it of ctx.args.filter(predicate))
+            yield it;
+
+        for (const it of ctx.variables.filter(predicate))
+            yield it
+    }
+
+    const visitInterface = function *(ctx: InterfaceInfo): Generator<InterfaceInfo | InterfaceProperty | InterfaceMethod> {
+        if (seenInterface.has(ctx))
+            return
+        seenInterface.add(ctx)
+
+        if (predicate(ctx))
+            yield ctx
+
+        for (const it of ctx.readProp.filter(predicate))
+            yield it
+
+        for (const it of ctx.writeProp.filter(predicate))
+            yield it
+
+        for (const it of ctx.methods)
+            yield it
+
+        for (const it of ctx.extends) {
+            const ifInfo = getInterfaceByName(includes, it)
+            if (ifInfo) {
+                for (const p of visitInterface(ifInfo))
+                    yield p
+            }
+        }
+    }
+
+    const visitClass = function *(ctx: ClassInfo): Generator<ClassInfo | ClassVariable | ClassMethod | InterfaceInfo | InterfaceProperty | InterfaceMethod> {
+        if (seenClass.has(ctx))
+            return
+        seenClass.add(ctx)
+
+        if (predicate(ctx))
+            yield ctx
+
+        for (const it of ctx.variables.filter(predicate))
+            yield it;
+
+        for (const it of ctx.methods.filter(predicate))
+            yield it
+
+        for (const it of ctx.extends) {
+            const classInfo = getClassByName(includes, it)
+            if (classInfo) {
+                for (const it of visitClass(classInfo))
+                    yield it
+            }
+        }
+
+        for (const it of ctx.implements) {
+            const ifInfo = getInterfaceByName(includes, it)
+            if (ifInfo) {
+                for (const it of visitInterface(ifInfo))
+                    yield it
+            }
+        }
+    }
+
+    for (const ctx of context) {
+        switch(ctx.context) {
+        case ContextTag.CLASS_METHOD:
+            for (const it of visitClassMethod(ctx))
+                yield it
+            break;
+
+        case ContextTag.GLOBAL_FUNCTION:
+            for (const it of visitGlobalFunction(ctx))
+                yield it
+            break;
+
+        case ContextTag.CLASS:
+            for (const it of visitClass(ctx))
+                yield it
+            break;
+
+        case ContextTag.INTERFACE:
+            for (const it of visitInterface(ctx))
+                yield it
+            break
+        }
+    }
+
+    for (const unit of includes) {
+        for (const it of Object.values(unit.defines).filter(predicate))
+            yield it
+
+        for (const it of Object.values(unit.classes).filter(predicate))
+            yield it
+
+        for (const it of Object.values(unit.interfaces).filter(predicate))
+            yield it
+
+        for (const it of Object.values(unit.globalFunctions).filter(predicate))
+            yield it
+
+        for (const it of Object.values(unit.globalVariables).filter(predicate))
+            yield it
+
+        for (const it of Object.values(unit.types).filter(predicate))
+            yield it
+    }
+}
+
+
+export type DefinitionsTypes = Argument | LocalVariable
+                                | InterfaceInfo | InterfaceMethod | InterfaceProperty
+                                | ClassInfo | ClassMethod | ClassVariable | LocalVariable
+                                | DefineInfo | GlobalFunction | GlobalVariable
+                                | TypeInfo
+
+export interface Definition
+{
+    fileName: string
+    begin: Position
+    end: Position
+}
+
+
+export function * getScopeDefinitions(includes: UnitInfo[], position: Position, predicate: (e:DefinitionsTypes) => boolean): Generator<Definition>
+{
+
+    function mk(unit: UnitInfo, item: DefinitionsTypes): Definition
+    {
+        switch (item.context) {
+        case ContextTag.DEFINE:
+            return { fileName: unit.fileName, begin: item.definitions[0].begin, end: item.definitions[0].end }
+
+        // case ContextTag.INCLUDE:
+        //     return { fileName: unit.fileName, begin: item.position, end: item.position};
+
+        default:
+            return { fileName: unit.fileName, begin: item.begin, end: item.end }
+        }
+    }
+
+    function * visitDefineDefinitions(unit: UnitInfo): Generator<Definition>
+    {
+        for (const it of Object.values(unit.defines).filter(predicate)) {
+            yield mk(unit, it)
+        }
+    }
+
+    function * visitTypeDefinitions(unit: UnitInfo): Generator<Definition>
+    {
+        for (const it of Object.values(unit.classes).filter(predicate)) {
+            yield mk(unit, it);
+        }
+
+        for (const it of Object.values(unit.interfaces).filter(predicate)) {
+            yield mk(unit, it);
+        }
+
+        for (const it of Object.values(unit.types).filter(predicate)) {
+            yield mk(unit, it)
+        }
+    }
+
+    function * visitGlobalsDefinitions(unit: UnitInfo): Generator<Definition>
+    {
+        for (const it of Object.values(unit.globalFunctions).filter(predicate)) {
+            yield mk(unit, it)
+        }
+
+        for (const it of Object.values(unit.globalVariables).filter(predicate)) {
+            yield mk(unit, it)
+        }
+    }
+
+    function * visitClassDefinitions(unit: UnitInfo, classInfo: ClassInfo): Generator<Definition>
+    {
+        for (const it of classInfo.methods.filter(predicate)) {
+            yield mk(unit, it)
+        }
+
+        for (const it of classInfo.variables.filter(predicate)) {
+            yield mk(unit, it)
+        }
+    }
+
+    function * visitInterfaceDefinitions(unit: UnitInfo, interfaceInfo: InterfaceInfo): Generator<Definition>
+    {
+        for (const it of interfaceInfo.methods.filter(predicate)) {
+            yield mk(unit, it)
+        }
+
+        for (const it of interfaceInfo.readProp.filter(predicate)) {
+            yield mk(unit, it)
+        }
+
+        for (const it of interfaceInfo.writeProp.filter(predicate)) {
+            yield mk(unit, it)
+        }
+    }
+
+    function * visitClassInheritance(unit: UnitInfo, info: ClassInfo|InterfaceInfo): Generator<Definition>
+    {
+        const inheritance = getInheritance(includes, info)
+
+        for (const it of inheritance) {
+            switch(it.context) {
+            case ContextTag.CLASS:
+                for (const e of visitClassDefinitions(unit, it))
+                    yield e;
+                break
+
+            case ContextTag.INTERFACE:
+                for (const e of visitInterfaceDefinitions(unit, it))
+                    yield e;
+                break;
+            }
+        }
+    }
+
+    function * visitFunctionOrMethodDefinitions(unit: UnitInfo, methodInfo: ClassMethodInfo|GlobalFunction): Generator<Definition>
+    {
+        for (const it of methodInfo.args.filter(predicate)) {
+            yield mk(unit, it);
+        }
+
+        for (const it of methodInfo.variables.filter(predicate)) {
+            yield mk(unit, it)
+        }
+    }
+
+    if (includes.length === 0)
+        return;
+
+    for (const unit of includes) {
+        for (const it of visitDefineDefinitions(unit))
+            yield it
+
+        for (const it of visitTypeDefinitions(unit))
+            yield it
+
+        for (const it of visitGlobalsDefinitions(unit))
+            yield it
+
+    }
+
+    const main = includes[0];
+    const context = main.getContext(position);
+    for (const it of context) {
+        switch (it.context) {
+                // default:
+                //     assertUnreachable(it.context);
+
+        case ContextTag.CLASS:
+            for (const e of visitClassDefinitions(main, it))
+                yield e;
+
+            for (const e of visitClassInheritance(main, it))
+                yield e;
+
+            break;
+
+        case ContextTag.INTERFACE:
+            for (const e of visitInterfaceDefinitions(main, it))
+                yield e;
+
+            for (const e of visitClassInheritance(main, it))
+                yield e;
+
+            break;
+
+        case ContextTag.CLASS_METHOD:
+        case ContextTag.GLOBAL_FUNCTION:
+            for (const e of visitFunctionOrMethodDefinitions(main, it))
+                yield e;
+        }
+    }
 }

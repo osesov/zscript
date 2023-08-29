@@ -36,7 +36,9 @@ export const workspaceFileAccessor: FileAccessor = {
 
 export function activate(context: vscode.ExtensionContext)
 {
-	console.log("Activate zscript extension")
+	const devMode = context.extensionMode === vscode.ExtensionMode.Development;
+
+	console.log(`Activate zscript extension in ${devMode ? "dev" : "prd"} mode`)
 	const outputChannel: vscode.LogOutputChannel = Window.createOutputChannel('Zodiac Script', { log: true });
 	logSystem.addSink(new VSCodeSink(outputChannel))
 	// logSystem.addSink(new ConsoleSink())

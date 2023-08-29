@@ -1,185 +1,76 @@
-import { ClassInfo, ClassMethodInfo, ContextTag, GlobalFunction, InterfaceInfo, Position, UnitInfo } from "../lang/UnitInfo";
+import { ContextTag, DocBlock, Position } from "../lang/UnitInfo";
 import { CancellationToken } from "../util/util";
 import { ZsRepository } from "../lang/zsRepository";
-import {CompletionItem, CompletionItemKind} from 'vscode-languageclient/node'
+import { CompletionItemKind} from 'vscode-languageclient/node'
+import { getScopeSymbols } from "../lang/InterUnitInfo";
+import { Logger, logSystem } from "../util/logger";
 
 export interface ZsCompletionSink
 {
-    add(label: string, kind: CompletionItemKind, options ?: CompletionItem): void;
+    add(label: string, kind: CompletionItemKind, detail: string | undefined, doc: DocBlock): void;
 }
 
 export class ZsCompletions
 {
+    private logger: Logger
+
     constructor(private repo: ZsRepository)
     {
+        this.logger = logSystem.getLogger(ZsCompletions)
     }
 
     public async getCompletions(result: ZsCompletionSink, fileName: string, prefix: string, position: Position, token: CancellationToken): Promise<void>
     {
         const includes = await this.repo.getIncludeQueue(fileName)
-        let p: Position | undefined = position
+        const kinds = new Map<ContextTag, CompletionItemKind>(
+            [
+                [ContextTag.ARGUMENT, CompletionItemKind.Variable],
+                [ContextTag.LOCAL_VARIABLE, CompletionItemKind.Variable],
 
-        for (const unit of includes) {
+                [ContextTag.GLOBAL_VARIABLE, CompletionItemKind.Variable],
+                [ContextTag.GLOBAL_FUNCTION, CompletionItemKind.Function],
+
+                [ContextTag.CLASS, CompletionItemKind.Class],
+                [ContextTag.CLASS_METHOD, CompletionItemKind.Method],
+                [ContextTag.CLASS_VARIABLE, CompletionItemKind.Field],
+
+                [ContextTag.INTERFACE, CompletionItemKind.Interface],
+                [ContextTag.INTERFACE_METHOD, CompletionItemKind.Method],
+                [ContextTag.INTERFACE_PROPERTY, CompletionItemKind.Property],
+
+                [ContextTag.DEFINE, CompletionItemKind.Constant],
+                [ContextTag.TYPE, CompletionItemKind.TypeParameter],
+            ]
+        )
+
+        for (const it of getScopeSymbols(includes, position, (e) => e.name.startsWith(prefix))) {
             if (token.isCancellationRequested)
                 break;
 
-            if (!unit)
-                continue;
-
-            await this.getUnitCompletions(result, prefix, p, unit, token);
-            p = undefined
-        }
-    }
-
-
-    ////
-    private getUnitCompletions(result: ZsCompletionSink, prefix: string, position: Position|undefined, unit: UnitInfo, token: CancellationToken): void
-    {
-        for (const e of Object.keys(unit.classes)) {
-            if (token.isCancellationRequested)
-                break
-            if (e.startsWith(prefix))
-                result.add(e, CompletionItemKind.Class)
-        }
-
-        for (const e of Object.keys(unit.interfaces)) {
-            if (token.isCancellationRequested)
-                break
-            if (e.startsWith(prefix))
-                result.add(e, CompletionItemKind.Interface)
-        }
-
-        for (const e of Object.keys(unit.defines)) {
-            if (token.isCancellationRequested)
-                break
-            if (e.startsWith(prefix))
-                result.add(e, CompletionItemKind.Constant)
-        }
-
-        for (const e of Object.keys(unit.types)) {
-            if (token.isCancellationRequested)
-                break
-            if (e.startsWith(prefix))
-                result.add(e, CompletionItemKind.Class)
-        }
-
-        for (const e of Object.keys(unit.globalFunctions)) {
-            if (token.isCancellationRequested)
-                break;
-            if (e.startsWith(prefix))
-                result.add(e, CompletionItemKind.Function)
-        }
-
-        for (const e of Object.keys(unit.globalVariables)) {
-            if (token.isCancellationRequested)
-                break;
-            if (e.startsWith(prefix))
-                result.add(e, CompletionItemKind.Variable)
-        }
-
-        if (!position)
-            return;
-
-        const context = unit.getContext(position)
-        for (const it of context) {
-            switch (it.context) {
-            // default:
-            //     assertUnreachable(it.context);
-
-            case ContextTag.CLASS:
-                this.getClassCompletions(result, prefix, it, token);
-                break;
-
-            case ContextTag.METHOD:
-                this.getClassMethodCompletions(result, prefix, it, token);
-                break;
-
-            case ContextTag.FUNCTION:
-                this.getFunctionCompletions(result, prefix, it, token);
-                break;
-
-            case ContextTag.INTERFACE:
-                this.getInterfaceCompletions(result, prefix, it, token);
-                break;
+            let kind = kinds.get(it.context);
+            if (!kind) {
+                this.logger.error(`Kind if not defined for ${it.context}`)
+                kind = CompletionItemKind.Value
             }
+
+            const doc = "docBlock" in it ? it.docBlock : []
+            let detail : string | undefined  = undefined
+
+            switch(it.context) {
+            case ContextTag.GLOBAL_FUNCTION:
+            case ContextTag.CLASS_METHOD:
+
+                detail = it.type.join(' ');
+
+                if (it.context == ContextTag.CLASS_METHOD)
+                    detail += " " + it.parent.name + "."
+
+                detail += '(';
+                detail += it.args.map( e => e.type.join(' ') + ' ' + e.name).join(',')
+                detail += ')';
+            }
+
+            result.add(it.name, kind, detail, doc)
         }
     }
-
-    // todo: class/interface completions should take inheritance into account
-    private getClassCompletions(result: ZsCompletionSink, prefix: string, classInfo: ClassInfo, token: CancellationToken): void
-    {
-        for (const e of classInfo.methods) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.add(e.name, CompletionItemKind.Method)
-        }
-
-        for (const e of classInfo.variables) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.add(e.name, CompletionItemKind.Variable)
-        }
-    }
-
-    private getInterfaceCompletions(result: ZsCompletionSink, prefix: string, info: InterfaceInfo, token: CancellationToken): void
-    {
-        for (const e of info.methods) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.add(e.name, CompletionItemKind.Method)
-        }
-
-        for (const e of info.readProp) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.add(e.name, CompletionItemKind.Variable)
-        }
-
-        for (const e of info.writeProp) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.add(e.name, CompletionItemKind.Variable)
-        }
-    }
-
-    private getClassMethodCompletions(result: ZsCompletionSink, prefix: string, data: ClassMethodInfo, token: CancellationToken): void
-    {
-        for (const e of data.args) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.add(e.name, CompletionItemKind.Variable)
-        }
-
-        for (const e of data.variables) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.add(e.name, CompletionItemKind.Variable)
-        }
-    }
-
-    private getFunctionCompletions(result: ZsCompletionSink, prefix: string, data: GlobalFunction, token: CancellationToken): void
-    {
-        for (const e of data.args) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.add(e.name, CompletionItemKind.Variable)
-        }
-
-        for (const e of data.variables) {
-            if (token.isCancellationRequested)
-                break
-            if (e.name.startsWith(prefix))
-                result.add(e.name, CompletionItemKind.Variable)
-        }
-    }
-
-
 }

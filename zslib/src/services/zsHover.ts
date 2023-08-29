@@ -1,21 +1,22 @@
-import { getClassByName, getDefinesByName, getGlobalFunctionByName, getGlobalVariableByName, getInterfaceByName } from "../lang/InterUnitInfo";
-import { ClassInfo, ClassMethodInfo, ClassMethodVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, MethodArgument, Position, UnitInfo } from "../lang/UnitInfo";
+import { getScopeSymbols } from "../lang/InterUnitInfo";
+import { ClassInfo, ClassMethodInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, Position, UnitInfo, TypeInfo } from "../lang/UnitInfo";
 import { ZsRepository } from "../lang/zsRepository";
-import { CancellationToken } from "../util/util";
+import { CancellationToken, assertUnreachable } from "../util/util";
 
 export interface ZsHoverSink
 {
-    setArgument(info: MethodArgument): void
+    setArgument(info: Argument): void
+    setLocalVariable(info: LocalVariable): void
 
-    setDefine(info: DefineInfo[]): void
+    setType(info: TypeInfo): void
+
+    setDefine(info: DefineInfo): void
     setClass(info: ClassInfo): void
     setClassMethod(info: ClassMethodInfo): void
     setClassVariable(info: ClassVariable): void
-    setClassMethodVariable(info: ClassMethodVariable): void
 
     setGlobalVariable(info: GlobalVariable): void
     setGlobalFunction(info: GlobalFunction): void
-    setGlobalFunctionVariable(info: GlobalFunctionVariable): void
 
     setInterface(info: InterfaceInfo): void
     setInterfaceMethod(info: InterfaceMethod): void
@@ -34,180 +35,32 @@ export class ZsHover
         if (includes.length === 0)
             return
 
-        const main: UnitInfo = includes[0]
-        const context = main.getContext(position).reverse()
-        const seenClass = new Set<ClassInfo>
-        const seenInterface = new Set<InterfaceInfo>
+        const g = getScopeSymbols(includes, position, (e) => e.name === word );
+        const generatorValue = g.next();
 
-        const checkMethod = (ctx: ClassMethodInfo): boolean => {
-            if (ctx.name === word) {
-                result.setClassMethod(ctx)
-                return true;
-            }
-
-            const variable = ctx.variables.find(e => e.name === word);
-            if (variable) {
-                result.setClassMethodVariable(variable)
-                return true;
-            }
-
-            const arg = ctx.args.find(e => e.name === word)
-            if (arg) {
-                result.setArgument(arg);
-                return true;
-            }
-
-            return false
-        }
-
-        const checkFunction = (ctx: GlobalFunction): boolean => {
-            if (ctx.name === word) {
-                result.setGlobalFunction(ctx)
-                return true
-            }
-
-            const variable = ctx.variables.find(e => e.name === word);
-            if (variable) {
-                result.setGlobalFunctionVariable(variable)
-                return true
-            }
-
-            const arg = ctx.args.find(e => e.name === word)
-            if (arg) {
-                result.setArgument(arg);
-                return true
-            }
-            return false
-        }
-
-        const checkInterface = (ctx: InterfaceInfo): boolean => {
-            if (seenInterface.has(ctx))
-                return false
-            seenInterface.add(ctx)
-
-            if (ctx.name === word) {
-                result.setInterface(ctx)
-                return true
-            }
-
-            const readProp = ctx.readProp.find(e => e.name === word);
-            if (readProp) {
-                result.setInterfaceProperty(readProp);
-                return true
-            }
-
-            const writeProp = ctx.writeProp.find(e => e.name === word);
-            if (writeProp) {
-                result.setInterfaceProperty(writeProp);
-                return true
-            }
-
-            const method = ctx.methods.find( e => e.name === word)
-            if (method) {
-                result.setInterfaceMethod(method)
-                return true
-            }
-
-            for (const it of ctx.inherit) {
-                const ifInfo = getInterfaceByName(includes, it)
-                if (ifInfo && checkInterface(ifInfo))
-                    return true;
-            }
-
-            return false;
-        }
-
-        const checkClass = (ctx: ClassInfo): boolean => {
-            if (seenClass.has(ctx))
-                return false
-            seenClass.add(ctx)
-
-            if (ctx.name === word) {
-                result.setClass(ctx)
-                return true
-            }
-
-            const variable = ctx.variables.find(e => e.name === word);
-            if (variable) {
-                result.setClassVariable(variable);
-                return true
-            }
-
-            const method = ctx.methods.find( e => e.name === word)
-            if (method) {
-                result.setClassMethod(method)
-                return true
-            }
-
-            for (const it of ctx.extends) {
-                const classInfo = getClassByName(includes, it)
-                if (classInfo && checkClass(classInfo))
-                    return true;
-            }
-
-            for (const it of ctx.implements) {
-                const ifInfo = getInterfaceByName(includes, it)
-                if (ifInfo && checkInterface(ifInfo))
-                    return true;
-            }
-
-            return false;
-        }
-
-        for (const ctx of context) {
-            switch(ctx.context) {
-            case ContextTag.METHOD:
-                if (checkMethod(ctx))
-                    return
-                break;
-
-            case ContextTag.FUNCTION:
-                if (checkFunction(ctx))
-                    return
-                break;
-
-            case ContextTag.CLASS:
-                if (checkClass(ctx))
-                    return;
-                break;
-
-            case ContextTag.INTERFACE:
-                if (checkInterface(ctx))
-                    return
-                break
-            }
-        }
-
-        const defineInfo = getDefinesByName(includes, word);
-        if (defineInfo && defineInfo.length > 0) {
-            result.setDefine(defineInfo);
-            return;
-        }
-
-        const classInfo = getClassByName(includes, word);
-        if (classInfo) {
-            result.setClass(classInfo);
+        if (generatorValue.done)
             return
+
+        const value = generatorValue.value;
+
+        switch(value.context) {
+
+            // case ContextTag.INCLUDE:
+        case ContextTag.DEFINE: result.setDefine(value); break;
+        case ContextTag.INTERFACE: result.setInterface(value); break;
+        case ContextTag.INTERFACE_PROPERTY: result.setInterfaceProperty(value); break;
+        case ContextTag.INTERFACE_METHOD: result.setInterfaceMethod(value); break
+        case ContextTag.CLASS: result.setClass(value); break;
+        case ContextTag.CLASS_VARIABLE: result.setClassVariable(value); break;
+        case ContextTag.CLASS_METHOD: result.setClassMethod(value); break;
+        case ContextTag.LOCAL_VARIABLE: result.setLocalVariable(value); break;
+        case ContextTag.GLOBAL_FUNCTION: result.setGlobalFunction(value); break;
+        case ContextTag.GLOBAL_VARIABLE: result.setGlobalVariable(value); break;
+        case ContextTag.ARGUMENT: result.setArgument(value); break;
+        case ContextTag.TYPE: result.setType(value); break;
+
+        // default:
+            // assertUnreachable(value.context);
         }
-
-        const interfaceInfo = getInterfaceByName(includes, word);
-        if (interfaceInfo) {
-            result.setInterface(interfaceInfo)
-            return;
-        }
-
-        const globalFunctionInfo = getGlobalFunctionByName(includes, word);
-        if (globalFunctionInfo) {
-            result.setGlobalFunction(globalFunctionInfo)
-            return;
-        }
-
-        const globalVariableInfo = getGlobalVariableByName(includes, word);
-        if (globalVariableInfo) {
-            result.setGlobalVariable(globalVariableInfo)
-            return;
-        }
-
-
     }
 }
