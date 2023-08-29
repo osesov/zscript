@@ -23,11 +23,13 @@ int x = 2;
 enum XXX
 {
     AAA = 132.444,
+    AAC,
+    ABC,
     BBB,
     CCC
 }
 
-XXX y = AAA;
+XXX y = XXX.BBB;
 
 BBB;
 CCC;

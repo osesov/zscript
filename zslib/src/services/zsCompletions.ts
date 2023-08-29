@@ -2,7 +2,7 @@ import { ContextTag, DocBlock, Position } from "../lang/UnitInfo";
 import { CancellationToken } from "../util/util";
 import { ZsRepository } from "../lang/zsRepository";
 import { CompletionItemKind} from 'vscode-languageclient/node'
-import { getScopeSymbols } from "../lang/InterUnitInfo";
+import { getScopeContext, getScopeSymbols } from "../lang/InterUnitInfo";
 import { Logger, logSystem } from "../util/logger";
 
 export interface ZsCompletionSink
@@ -19,7 +19,7 @@ export class ZsCompletions
         this.logger = logSystem.getLogger(ZsCompletions)
     }
 
-    public async getCompletions(result: ZsCompletionSink, fileName: string, prefix: string, position: Position, token: CancellationToken): Promise<void>
+    public async getCompletions(result: ZsCompletionSink, fileName: string, words: string[], position: Position, token: CancellationToken): Promise<void>
     {
         const includes = await this.repo.getIncludeQueue(fileName)
         const kinds = new Map<ContextTag, CompletionItemKind>(
@@ -42,10 +42,13 @@ export class ZsCompletions
                 [ContextTag.TYPE, CompletionItemKind.TypeParameter],
 
                 [ContextTag.ENUM, CompletionItemKind.Enum],
+                [ContextTag.ENUM_VALUE, CompletionItemKind.EnumMember],
             ]
         )
 
-        for (const it of getScopeSymbols(includes, position, (e) => e.name.startsWith(prefix))) {
+        for (const it of getScopeContext(includes, words, position)) {
+
+        // for (const it of getScopeSymbols(includes, position, (e) => e.name.startsWith(prefix))) {
             if (token.isCancellationRequested)
                 break;
 

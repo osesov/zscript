@@ -54,6 +54,22 @@ export namespace fromVscode
         }
     }
 
+    export function getWordsAtCursor(document: vscode.TextDocument, position: vscode.Position, prefix ?:boolean): string[]
+    {
+        const wordRange = document.getWordRangeAtPosition(position, /[_a-zA-Z][_a-zA-Z0-9]*([.][_a-zA-Z][_a-zA-Z0-9]*)*/);
+
+        if (!wordRange)
+            return []
+
+        let word = document.getText(wordRange);
+        const offset = position.character - wordRange.start.character;
+        if (prefix) {
+            word = word.substring(0, offset);
+        }
+
+        return word.split('.')
+    }
+
 }
 
 export namespace toVscode

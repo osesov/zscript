@@ -207,7 +207,7 @@ export class ZsRepository
                     this.logger.warn("Unable to find include {file}. Update 'zscript.includeDir'.", it)
                     continue
                 }
-                this.ensureFileLoaded(n, false);
+                this.ensureFileLoaded(n, false, false);
             }
         }
         catch(e: unknown) {
@@ -286,7 +286,7 @@ export class ZsRepository
         this.doLoading();
     }
 
-    private ensureFileLoaded(fileName: string, update: boolean): Promise<UnitInfo|undefined>
+    private ensureFileLoaded(fileName: string, update: boolean, force: boolean): Promise<UnitInfo|undefined>
     {
         const { promise, resolve } = getPromise<UnitInfo|undefined>()
 
@@ -311,8 +311,14 @@ export class ZsRepository
             info = this.unitInfo.get(fullName)
             break;
 
-        case 'opening':
         case 'update':
+            if (force) {
+                info.updateTime = 0;
+                this.doLoading();
+            }
+            return info.ready
+
+        case 'opening':
             return info.ready
 
         case 'failed':
@@ -351,7 +357,7 @@ export class ZsRepository
             if (!includeFile)
                 continue
 
-            const unit = await this.ensureFileLoaded(includeFile, false);
+            const unit = await this.ensureFileLoaded(includeFile, false, false);
             if (unit) {
                 result.push(unit)
 
@@ -369,7 +375,7 @@ export class ZsRepository
         const result : UnitInfo[] = []
 
         this.unitInfo.forEach( async (_, fileName) => {
-            const u = await this.ensureFileLoaded(fileName, false);
+            const u = await this.ensureFileLoaded(fileName, false, true);
             if (u)
                 result.push(u);
         })
@@ -379,17 +385,17 @@ export class ZsRepository
     /// document maintenance
     public onDocumentOpen(doc: TextDocument): Promise<UnitInfo|undefined>
     {
-        return this.ensureFileLoaded(doc.fileName, false);
+        return this.ensureFileLoaded(doc.fileName, false, false);
     }
 
     public onDocumentChange(doc: TextDocument): Promise<UnitInfo|undefined>
     {
-        return this.ensureFileLoaded(doc.fileName, true)
+        return this.ensureFileLoaded(doc.fileName, true, false)
     }
 
     public onDocumentAccess(doc: TextDocument): Promise<UnitInfo|undefined>
     {
-        return this.ensureFileLoaded(doc.fileName, false)
+        return this.ensureFileLoaded(doc.fileName, false, true)
     }
 }
 

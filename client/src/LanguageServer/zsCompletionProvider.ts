@@ -41,19 +41,18 @@ export class ZsCompletionProvider implements vscode.CompletionItemProvider
 
     async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, _context: vscode.CompletionContext): Promise<vscode.CompletionItem[]>
     {
-        const word = fromVscode.getWordAtCursor(document, position)
-        if (!word)
+        const words = fromVscode.getWordsAtCursor(document, position, true)
+        if (words.length === 0)
             return [];
 
-        this.logger.info("Get completions for: {@word}")
+        this.logger.info("Get completions for: {@word}", words)
         const fileName = document.uri.fsPath
 
         try {
             const result = new ZsCompletionSinkImpl
             await this.repo.onDocumentAccess(document);
-            await this.provider.getCompletions(result, fileName, word.prefix, fromVscode.position(position), token);
-            this.logger.info(`completion for ${word?.word} at ${word.offset}:
-                ${result.list.items.map(e => e.label)}`)
+            await this.provider.getCompletions(result, fileName, words, fromVscode.position(position), token);
+            this.logger.info(`completion for ${words.join('.')}: ${result.list.items.map(e => e.label)}`)
             return result.list.items
         } catch(e: unknown) {
             this.logger.error("Error {error}", e)

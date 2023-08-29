@@ -1,5 +1,5 @@
 import { it } from "node:test";
-import { Argument, ClassInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, Include, ClassMethod, NamedType, EnumInfo, EnumValue } from "./UnitInfo";
+import { Argument, ClassInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, Include, ClassMethod, NamedType, EnumInfo, EnumValue, SpanType, Type } from "./UnitInfo";
 
 // Get inheritance list given a class or interface (both extends and implements)
 export function getInheritance(includes: UnitInfo[], start: ClassInfo|InterfaceInfo): (ClassInfo|InterfaceInfo)[]
@@ -546,4 +546,171 @@ export function * getUnitSymbols(includes: UnitInfo[], predicate: (e: NamedType)
             yield mk(unit, it)
 
     }
+}
+
+export function getScopeContext(includes: UnitInfo[], words: string[], position: Position): NamedType[]
+{
+    type Predicate = (e: NamedType) => boolean
+
+    const main = includes[0]
+    let currentScope: NamedType[] = main.getContext(position)
+
+    function findTypeBeName(type: Type): NamedType[]
+    {
+        const result = []
+        const typeName = type[ type.length - 1];
+
+        for (const unit of includes) {
+            if (typeName in unit.classes)
+                result.push(unit.classes[typeName]);
+
+            if (typeName in unit.interfaces)
+                result.push(unit.interfaces[typeName]);
+
+            if (typeName in unit.enums)
+                result.push(unit.enums[typeName]);
+        }
+
+        return result;
+    }
+
+    function findDefine(predicate: Predicate): NamedType[]
+    {
+        const result = []
+        for (const unit of includes) {
+            result.push( ... Object.values(unit.defines).filter(predicate))
+        }
+        return result;
+    }
+
+    function findSymbolInInterface(info: InterfaceInfo, predicate: Predicate): NamedType[]
+    {
+        const result = []
+
+        result.push(... info.readProp.filter(predicate))
+        result.push(... info.writeProp.filter(predicate))
+        result.push(... info.methods.filter(predicate))
+
+        for(const it in info.extends) {
+            const next = getInterfaceByName(includes, it);
+            if (next)
+                result.push(... findSymbolInInterface(next, predicate));
+        }
+        return result;
+    }
+
+    function findSymbolInClass(info: ClassInfo, predicate: Predicate): NamedType[]
+    {
+        const result = []
+
+        result.push(... info.variables.filter(predicate))
+        result.push(... info.methods.filter(predicate))
+
+        for(const it in info.extends) {
+            const next = getClassByName(includes, it);
+            if (next)
+                result.push(... findSymbolInClass(next, predicate));
+        }
+
+        for(const it of info.implements) {
+            const next = getInterfaceByName(includes, it);
+            if (next)
+                result.push(... findSymbolInInterface(next, predicate));
+        }
+
+        return result;
+    }
+
+    function findSymbolInFunction(info: GlobalFunction, predicate: Predicate): NamedType[]
+    {
+        const result = []
+
+        result.push( ... info.variables.filter(predicate) );
+        result.push( ... info.args.filter(predicate) );
+
+        return result;
+    }
+
+    function findSymbolInMethod(info: ClassMethod, predicate: Predicate): NamedType[]
+    {
+        const result = []
+
+        result.push( ... info.variables.filter(predicate) );
+        result.push( ... info.args.filter(predicate) );
+        result.push( ... findSymbolInClass(info.parent, predicate) );
+
+        return result;
+    }
+
+    function findSymbolInEnum(info: EnumInfo, predicate: Predicate): NamedType[]
+    {
+        return info.values.filter( predicate )
+    }
+
+    /// Check intermediate scopes
+    words.forEach((word, index, arr) => {
+        const firstEntry = index === 0
+        const lastEntry = index === arr.length - 1;
+
+        const predicate = lastEntry ? (e: NamedType) => e.name.startsWith(word) : (e: NamedType) => e.name === word
+        const newScope = []
+
+        currentScope.push( ... findDefine(predicate))
+
+        if (firstEntry) {
+            for (const unit of includes) {
+                newScope.push( ... Object.values(unit.enums).filter(predicate));
+                newScope.push( ... Object.values(unit.classes).filter(predicate));
+                newScope.push( ... Object.values(unit.interfaces).filter(predicate));
+                newScope.push( ... Object.values(unit.globalFunctions).filter(predicate));
+                newScope.push( ... Object.values(unit.globalVariables).filter(predicate));
+                newScope.push( ... Object.values(unit.defines).filter(predicate));
+                newScope.push( ... Object.values(unit.types).filter(predicate));
+            }
+        }
+
+        for (const it of currentScope) {
+            switch(it.context) {
+            case ContextTag.ARGUMENT:
+            case ContextTag.CLASS_VARIABLE:
+            case ContextTag.LOCAL_VARIABLE:
+            case ContextTag.GLOBAL_VARIABLE:
+            case ContextTag.INTERFACE_PROPERTY:
+                newScope.push( ... findTypeBeName(it.type));
+                break;
+
+            case ContextTag.CLASS:
+                newScope.push( ...findSymbolInClass(it, predicate) );
+                break;
+
+            case ContextTag.CLASS_METHOD:
+                if (firstEntry)
+                    newScope.push( ...findSymbolInMethod(it, predicate) );
+                break;
+
+            case ContextTag.GLOBAL_FUNCTION:
+                if (firstEntry)
+                    newScope.push( ...findSymbolInFunction(it, predicate) );
+                break;
+
+            case ContextTag.INTERFACE:
+                newScope.push( ...findSymbolInInterface(it, predicate) );
+                break;
+
+            case ContextTag.INTERFACE_METHOD: // nothing to advance (todo: check call)
+            case ContextTag.DEFINE:
+            case ContextTag.ENUM_VALUE:
+            case ContextTag.TYPE: // TODO: this requires type parsing
+                break;
+
+            case ContextTag.ENUM:
+                newScope.push( ... findSymbolInEnum(it, predicate));
+                break;
+            }
+        }
+
+        currentScope = newScope
+    });
+
+    return currentScope;
 }
