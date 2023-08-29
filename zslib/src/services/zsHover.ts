@@ -37,7 +37,7 @@ export class ZsHover
         if (includes.length === 0)
             return
 
-        const values = getScopeContext(includes, words, position)
+        const values = getScopeContext(includes, words, position, {prefix: false})
         for (const value of values) {
             // const g = getScopeSymbols(includes, position, (e) => e.name === words[0] );
             // const generatorValue = g.next();

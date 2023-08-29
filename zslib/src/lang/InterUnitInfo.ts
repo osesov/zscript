@@ -548,12 +548,13 @@ export function * getUnitSymbols(includes: UnitInfo[], predicate: (e: NamedType)
     }
 }
 
-export function getScopeContext(includes: UnitInfo[], words: string[], position: Position): NamedType[]
+export function getScopeContext(includes: UnitInfo[], words: string[], position: Position, options?: { prefix: boolean } ): NamedType[]
 {
     type Predicate = (e: NamedType) => boolean
 
     const main = includes[0]
     let currentScope: NamedType[] = main.getContext(position)
+    options = options ?? {prefix: false}
 
     function findTypeBeName(type: Type): NamedType[]
     {
@@ -652,20 +653,19 @@ export function getScopeContext(includes: UnitInfo[], words: string[], position:
         const firstEntry = index === 0
         const lastEntry = index === arr.length - 1;
 
-        const predicate = lastEntry ? (e: NamedType) => e.name.startsWith(word) : (e: NamedType) => e.name === word
+        const predicate = lastEntry && options?.prefix ? (e: NamedType) => e.name.startsWith(word) : (e: NamedType) => e.name === word
         const newScope = []
 
         currentScope.push( ... findDefine(predicate))
-
         if (firstEntry) {
             for (const unit of includes) {
-                newScope.push( ... Object.values(unit.enums).filter(predicate));
-                newScope.push( ... Object.values(unit.classes).filter(predicate));
-                newScope.push( ... Object.values(unit.interfaces).filter(predicate));
-                newScope.push( ... Object.values(unit.globalFunctions).filter(predicate));
-                newScope.push( ... Object.values(unit.globalVariables).filter(predicate));
-                newScope.push( ... Object.values(unit.defines).filter(predicate));
-                newScope.push( ... Object.values(unit.types).filter(predicate));
+                currentScope.push( ... Object.values(unit.enums).filter(predicate));
+                currentScope.push( ... Object.values(unit.classes).filter(predicate));
+                currentScope.push( ... Object.values(unit.interfaces).filter(predicate));
+                currentScope.push( ... Object.values(unit.globalFunctions).filter(predicate));
+                currentScope.push( ... Object.values(unit.globalVariables).filter(predicate));
+                currentScope.push( ... Object.values(unit.defines).filter(predicate));
+                currentScope.push( ... Object.values(unit.types).filter(predicate));
             }
         }
 
@@ -709,7 +709,8 @@ export function getScopeContext(includes: UnitInfo[], words: string[], position:
             }
         }
 
-        currentScope = newScope
+        // remove duplicates
+        currentScope.splice(0, currentScope.length, ...new Set(newScope).values())
     });
 
     return currentScope;

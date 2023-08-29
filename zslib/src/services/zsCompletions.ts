@@ -46,7 +46,7 @@ export class ZsCompletions
             ]
         )
 
-        for (const it of getScopeContext(includes, words, position)) {
+        for (const it of getScopeContext(includes, words, position, { prefix: true })) {
 
         // for (const it of getScopeSymbols(includes, position, (e) => e.name.startsWith(prefix))) {
             if (token.isCancellationRequested)
