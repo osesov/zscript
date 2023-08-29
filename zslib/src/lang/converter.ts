@@ -1,4 +1,4 @@
-import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, GlobalFunction, GlobalFunctionVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, UnitInfo, UnitInfoData } from "./UnitInfo"
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, GlobalFunction, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, UnitInfo, UnitInfoData, EnumInfo, EnumValue } from "./UnitInfo"
 
 export namespace json_converter
 {
@@ -204,29 +204,88 @@ export namespace json_converter
         if (!data)
             return {}
 
-        const classes = Object.keys(data)
+        const functions = Object.keys(data)
         const result: UnitInfoData["globalFunctions"] = {}
 
-        const variableToJson = (info: GlobalFunctionVariable) : GlobalFunctionVariable => {
+        const variableToJson = (info: LocalVariable) : LocalVariable => {
 
-            const newInfo: Partial<GlobalFunctionVariable> = {
+            const newInfo: Partial<LocalVariable> = {
                 ...info,
                 parent: undefined
             }
 
-            return newInfo as GlobalFunctionVariable
+            return newInfo as LocalVariable
         }
 
-        for(const className of classes) {
-            const classInfo = data[className]
+        for(const name of functions) {
+            const info = data[name]
 
-            const newClassInfo : GlobalFunction = {
-                ...classInfo,
+            const newInfo : GlobalFunction = {
+                ...info,
 
-                variables: classInfo.variables.map( e => variableToJson(e)),
+                variables: info.variables.map( e => variableToJson(e)),
             }
 
-            result[className] = newClassInfo
+            result[name] = newInfo
+        }
+
+        return result;
+    }
+
+    export function enumFromJson(data ?: UnitInfoData["enums"]): UnitInfoData["enums"]
+    {
+        if (!data)
+            return {}
+
+        const enums = Object.keys(data)
+        const result: UnitInfoData["enums"] = {}
+
+        for(const enumName of enums) {
+            const enumInfo = data[enumName]
+
+            const newEnumInfo : EnumInfo = {
+                ...enumInfo,
+
+                values: enumInfo.values.map( value => ({
+                    ...value,
+                    parent: enumInfo
+                })),
+            }
+
+            result[enumName] = newEnumInfo
+        }
+
+        return result;
+    }
+
+    export function enumToJson(data ?: UnitInfoData["enums"]): UnitInfoData["enums"]
+    {
+        if (!data)
+            return {}
+
+        const enums = Object.keys(data)
+        const result: UnitInfoData["enums"] = {}
+
+        const valueToJson = (info: EnumValue) : EnumValue => {
+
+            const newInfo: Partial<EnumValue> = {
+                ...info,
+                parent: undefined
+            }
+
+            return newInfo as EnumValue
+        }
+
+        for(const enumName of enums) {
+            const enumInfo = data[enumName]
+
+            const newEnumInfo : EnumInfo = {
+                ...enumInfo,
+
+                values: enumInfo.values.map( e => valueToJson(e)),
+            }
+
+            result[enumName] = newEnumInfo
         }
 
         return result;

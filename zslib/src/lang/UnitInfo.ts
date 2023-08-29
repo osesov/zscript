@@ -15,7 +15,9 @@ export enum ContextTag
     GLOBAL_VARIABLE,
     ARGUMENT,
     LOCAL_VARIABLE,
-    TYPE
+    TYPE,
+    ENUM,
+    ENUM_VALUE,
 }
 
 export interface Position
@@ -61,7 +63,7 @@ export interface LocalVariable extends WithContext, NameAndType
     begin: Position
     end: Position
     docBlock: DocBlock
-    parent: ClassMethod
+    parent: ClassMethod | GlobalFunction
 }
 
 export interface Argument extends WithContext
@@ -170,12 +172,34 @@ export interface GlobalFunction extends WithContext, NameAndType
     docBlock: DocBlock
 }
 
+export interface EnumValue extends WithContext
+{
+
+    context: ContextTag.ENUM_VALUE
+    name: string
+    value?: number
+    parent: EnumInfo
+    begin: Position
+    end: Position
+    docBlock: DocBlock
+}
+
+export interface EnumInfo extends WithContext
+{
+    context: ContextTag.ENUM
+    name: string
+    begin: Position
+    end: Position
+    values: EnumValue[]
+    docBlock: DocBlock
+}
+
 export type SpanType = ClassInfo | InterfaceInfo | ClassMethod | GlobalFunction
 export type NamedType = Argument | LocalVariable
                                 | InterfaceInfo | InterfaceMethod | InterfaceProperty
                                 | ClassInfo | ClassMethod | ClassVariable | LocalVariable
                                 | DefineInfo | GlobalFunction | GlobalVariable
-                                | TypeInfo
+                                | TypeInfo | EnumInfo | EnumValue
 
 
 export interface UnitInfoData
@@ -187,6 +211,7 @@ export interface UnitInfoData
     readonly defines: { [name: string]: DefineInfo }
     readonly globalVariables: { [name: string]: GlobalVariable }
     readonly globalFunctions: { [name: string]: GlobalFunction }
+    readonly enums: { [name: string]: EnumInfo }
 }
 
 export class UnitInfo implements UnitInfoData
@@ -200,6 +225,7 @@ export class UnitInfo implements UnitInfoData
     public readonly defines: UnitInfoData["defines"]
     public readonly globalVariables: UnitInfoData["globalVariables"]
     public readonly globalFunctions: UnitInfoData["globalFunctions"]
+    public readonly enums: UnitInfoData["enums"]
 
     // list of spanning objects in order of begin position
     protected span: SpanType[]
@@ -214,6 +240,7 @@ export class UnitInfo implements UnitInfoData
         this.defines = data?.defines ?? {}
         this.globalVariables = data?.globalVariables ?? {}
         this.globalFunctions = json_converter.functionFromJson(data?.globalFunctions)
+        this.enums = json_converter.enumFromJson(data?.enums)
         this.span = json_converter.computeSpan(this)
     }
 
@@ -227,6 +254,7 @@ export class UnitInfo implements UnitInfoData
             types: this.types,
             globalVariables: this.globalVariables,
             globalFunctions: json_converter.functionToJson(this.globalFunctions),
+            enums: json_converter.enumToJson(this.enums),
         }
     }
 

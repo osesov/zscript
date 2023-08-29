@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { ZsRepository } from '../../../zslib/src/lang/zsRepository'
 import { Logger, logSystem } from '../../../zslib/src/util/logger';
 import { fromVscode, toVscode } from '../../../zslib/src/util/vscodeUtil';
-import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, DefineInfo, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, NameAndType, Type, TypeInfo } from '../../../zslib/src/lang/UnitInfo';
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, DefineInfo, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, NameAndType, Type, TypeInfo, EnumInfo, EnumValue } from '../../../zslib/src/lang/UnitInfo';
 import { languageId } from '../common';
 import { ZsHover, ZsHoverSink } from '../../../zslib/src/services/zsHover'
 
@@ -193,6 +193,27 @@ class ZsHoverSinkImpl implements ZsHoverSink
         )
     }
 
+    setEnum(info: EnumInfo): void {
+        if (this.hover)
+            return
+
+        this.hover = new vscode.Hover(
+            this.format("enum", info.name, info.docBlock),
+            toVscode.range(info.begin, info.end)
+        )
+    }
+
+    setEnumValue(info: EnumValue): void {
+        if (this.hover)
+            return
+
+        const title = info.parent.name + "::" + info.name;
+
+        this.hover = new vscode.Hover(
+            this.format("enum value", title, info.docBlock),
+            toVscode.range(info.begin, info.end)
+        )
+    }
 }
 
 export class ZsHoverProvider implements vscode.HoverProvider

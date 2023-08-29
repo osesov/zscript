@@ -35,6 +35,9 @@ Chunk
     / _ & {return helper.isMethod()}     MethodExpression
     / _ & {return helper.isFunction()}   FunctionExpression
 
+    / _ & {return helper.isTopLevel()}   EnumDeclaration
+    / _ & {return helper.isEnum()}       EnumValue
+
     // TODO: this consumes sime unknown input to avoid errors
     // Comment and implement!
     / IgnoreStatement
@@ -191,6 +194,20 @@ TypeDeclaration
             unitInfo.addType(name, t.join(''.trim()), location(), helper.docBlock)
         }
 
+EnumDeclaration
+    = "enum" _ name:IdentToken _ &("{")
+        {
+            helper.trace(location(), `enum ${name}`)
+            helper.beginContext(CurrentContext.ENUM, name, location())
+            unitInfo.beginEnum(location(), name, helper.docBlock)
+        }
+
+EnumValue
+    = name:IdentToken value:(_ "=" @NumberToken )? _ ","?
+        {
+            unitInfo.addEnumValue(location(), name, value, helper.docBlock)
+        }
+
 ClassDeclaration
     = ClassToken _ name:IdentToken _ impl:("implements" _ @IdList)? ext:("extends" _ @IdList)? _ &('{')
         {
@@ -282,8 +299,8 @@ StringToken
     / _ ['] ( [^\\'] / [\\]. )* [']
 
 NumberToken
-    = _ [0-9]+ ([.] [0-9]* ([eE] [-+] [0-9]+)? )?
-    / _ [0-9]* [.] [0-9]+ ([eE] [-+] [0-9]+)?
+    = _ @([0-9]+ ([.] [0-9]* ([eE] [-+] [0-9]+)? )? { return text()})
+    / _ @([0-9]* [.] [0-9]+ ([eE] [-+] [0-9]+)? {return text()} )
 
 HashToken
     = _ "#"

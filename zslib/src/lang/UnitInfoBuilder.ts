@@ -1,10 +1,10 @@
-import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, Type, TypeInfo, UnitInfo } from "./UnitInfo";
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, Type, TypeInfo, UnitInfo, EnumInfo } from "./UnitInfo";
 import { FileRange } from "./zscript-parse";
 
 export class UnitInfoBuilder extends UnitInfo
 {
     // temporal state
-    private stack: (SpanType)[] = []
+    private stack: (SpanType | EnumInfo)[] = []
 
     constructor(fileName: string)
     {
@@ -168,7 +168,8 @@ export class UnitInfoBuilder extends UnitInfo
         const currentFunction = this.getCurrentFunction(location)
 
         for (const [name, location] of names) {
-            const info: GlobalFunctionVariable = {
+            const info: LocalVariable = {
+                context: ContextTag.LOCAL_VARIABLE,
                 begin: location.start,
                 end: location.end,
                 name: name,
@@ -211,6 +212,35 @@ export class UnitInfoBuilder extends UnitInfo
 
             this.globalVariables[name] = info
         }
+    }
+
+    public beginEnum(location: FileRange, name: string, docBlock: DocBlock)
+    {
+        const info: EnumInfo = {
+            context: ContextTag.ENUM,
+            begin: location.start,
+            end: location.end,
+            name: name,
+            values: [],
+            docBlock: docBlock,
+        }
+
+        this.enums[name] = info
+        this.stack.push(info)
+    }
+
+    public addEnumValue(location: FileRange, name: string, value: number|undefined, docBlock: DocBlock)
+    {
+        const t = this.getCurrentEnum(location)
+        t.values.push({
+            context: ContextTag.ENUM_VALUE,
+            name,
+            value,
+            begin: location.start,
+            end: location.end,
+            docBlock: docBlock,
+            parent: t
+        })
     }
 
     public beginGlobalFunction(type: Type, name: string, args: [Type,string,FileRange][], location: FileRange, docBlock: DocBlock)
@@ -318,5 +348,13 @@ export class UnitInfoBuilder extends UnitInfo
         throw Error(`No current function: ${location.start.line}...${location.end.line}`)
     }
 
+    public getCurrentEnum(location: FileRange): EnumInfo
+    {
+        const t = this.stack[ this.stack.length - 1];
 
+        if (t.context === ContextTag.ENUM)
+            return t
+
+        throw Error(`No current enum: ${location.start.line}...${location.end.line}`)
+    }
 }

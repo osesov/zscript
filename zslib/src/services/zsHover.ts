@@ -1,5 +1,5 @@
 import { getScopeSymbols } from "../lang/InterUnitInfo";
-import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, Position, UnitInfo, TypeInfo } from "../lang/UnitInfo";
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, Position, UnitInfo, TypeInfo, EnumInfo, EnumValue } from "../lang/UnitInfo";
 import { ZsRepository } from "../lang/zsRepository";
 import { CancellationToken, assertUnreachable } from "../util/util";
 
@@ -9,6 +9,8 @@ export interface ZsHoverSink
     setLocalVariable(info: LocalVariable): void
 
     setType(info: TypeInfo): void
+    setEnum(info: EnumInfo): void
+    setEnumValue(info: EnumValue): void
 
     setDefine(info: DefineInfo): void
     setClass(info: ClassInfo): void
@@ -58,6 +60,8 @@ export class ZsHover
         case ContextTag.GLOBAL_VARIABLE: result.setGlobalVariable(value); break;
         case ContextTag.ARGUMENT: result.setArgument(value); break;
         case ContextTag.TYPE: result.setType(value); break;
+        case ContextTag.ENUM: result.setEnum(value); break;
+        case ContextTag.ENUM_VALUE: result.setEnumValue(value); break;
 
         // default:
             // assertUnreachable(value.context);

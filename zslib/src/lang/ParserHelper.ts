@@ -11,6 +11,7 @@ export enum CurrentContext
     CLASS = 'class',
     METHOD = 'method',
     FUNCTION = 'function',
+    ENUM = 'enum'
 }
 
 export interface ParseContext
@@ -120,6 +121,12 @@ export class ParserHelper
     {
         return this.currentContext.length > 0
             && this.currentContext[this.currentContext.length-1].in === CurrentContext.FUNCTION
+    }
+
+    isEnum(): boolean
+    {
+        return this.currentContext.length > 0
+            && this.currentContext[this.currentContext.length-1].in === CurrentContext.ENUM
     }
 
     saveContext() : ParseContext[]

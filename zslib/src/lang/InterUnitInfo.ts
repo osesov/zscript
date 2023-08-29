@@ -1,5 +1,5 @@
 import { it } from "node:test";
-import { Argument, ClassInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, Include, ClassMethod, NamedType } from "./UnitInfo";
+import { Argument, ClassInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, Include, ClassMethod, NamedType, EnumInfo, EnumValue } from "./UnitInfo";
 
 // Get inheritance list given a class or interface (both extends and implements)
 export function getInheritance(includes: UnitInfo[], start: ClassInfo|InterfaceInfo): (ClassInfo|InterfaceInfo)[]
@@ -98,7 +98,7 @@ export type ScopeSymbolsTypes = Argument | LocalVariable
                                 | InterfaceInfo | InterfaceMethod | InterfaceProperty
                                 | ClassInfo | ClassMethod | ClassVariable | LocalVariable
                                 | DefineInfo | GlobalFunction | GlobalVariable
-                                | TypeInfo
+                                | TypeInfo | EnumInfo | EnumValue
 
 export function *getScopeSymbols(includes: UnitInfo[], position: Position, predicate: (e: ScopeSymbolsTypes) => boolean): Generator<ScopeSymbolsTypes, unknown>
 {
@@ -189,6 +189,15 @@ export function *getScopeSymbols(includes: UnitInfo[], position: Position, predi
         }
     }
 
+    const visitEnum = function * (ctx: EnumInfo): Generator<EnumInfo|EnumValue>
+    {
+        if (predicate(ctx))
+            yield ctx
+
+        for (const it of ctx.values.filter(predicate))
+            yield it;
+    }
+
     for (const ctx of context) {
         switch(ctx.context) {
         case ContextTag.CLASS_METHOD:
@@ -231,6 +240,11 @@ export function *getScopeSymbols(includes: UnitInfo[], position: Position, predi
 
         for (const it of Object.values(unit.types).filter(predicate))
             yield it
+
+        for (const it of Object.values(unit.enums)) {
+            for (const e of visitEnum(it))
+                yield e
+        }
     }
 }
 
@@ -279,6 +293,12 @@ export function * getScopeDefinitions(includes: UnitInfo[], position: Position, 
 
         for (const it of Object.values(unit.types).filter(predicate)) {
             yield mk(unit, it)
+        }
+
+        for (const it of Object.values(unit.enums)) {
+            for (const e of visitEnum(unit, it)) {
+                yield e
+            }
         }
     }
 
@@ -349,6 +369,16 @@ export function * getScopeDefinitions(includes: UnitInfo[], position: Position, 
         }
     }
 
+    function * visitEnum(unit: UnitInfo, enumInfo: EnumInfo): Generator<Definition>
+    {
+        if (predicate(enumInfo))
+            yield mk(unit, enumInfo)
+
+        for (const it of enumInfo.values.filter(predicate)) {
+            yield mk(unit, it)
+        }
+    }
+
     if (includes.length === 0)
         return;
 
@@ -400,7 +430,7 @@ export function * getScopeDefinitions(includes: UnitInfo[], position: Position, 
 export type SymbolType = InterfaceInfo | InterfaceMethod | InterfaceProperty
                                 | ClassInfo | ClassMethod | ClassVariable | LocalVariable
                                 | DefineInfo | GlobalFunction | GlobalVariable
-                                | TypeInfo
+                                | TypeInfo | EnumInfo | EnumValue
 
 interface SymbolLocation
 {
@@ -419,6 +449,15 @@ export function * getUnitSymbols(includes: UnitInfo[], predicate: (e: NamedType)
     function mk(unit: UnitInfo, symbol: SymbolType): SymbolLocation
     {
         return {unit, symbol}
+    }
+
+    const visitEnum = function *(unit: UnitInfo, ctx: EnumInfo): Generator<SymbolLocation> {
+
+        if (predicate(ctx))
+            yield mk(unit, ctx)
+
+        for (const it of ctx.values.filter(predicate))
+            yield mk(unit, it)
     }
 
     const visitInterface = function *(unit: UnitInfo, ctx: InterfaceInfo): Generator<SymbolLocation> {
@@ -492,6 +531,11 @@ export function * getUnitSymbols(includes: UnitInfo[], predicate: (e: NamedType)
                 yield e;
         }
 
+        for (const it of Object.values(unit.enums).filter(predicate)) {
+            for (const e of visitEnum(unit, it))
+                yield mk(unit, it)
+        }
+
         for (const it of Object.values(unit.globalFunctions).filter(predicate))
             yield mk(unit, it)
 
@@ -500,5 +544,6 @@ export function * getUnitSymbols(includes: UnitInfo[], predicate: (e: NamedType)
 
         for (const it of Object.values(unit.types).filter(predicate))
             yield mk(unit, it)
+
     }
 }

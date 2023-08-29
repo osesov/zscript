@@ -40,6 +40,8 @@ export class ZsCompletions
 
                 [ContextTag.DEFINE, CompletionItemKind.Constant],
                 [ContextTag.TYPE, CompletionItemKind.TypeParameter],
+
+                [ContextTag.ENUM, CompletionItemKind.Enum],
             ]
         )
 

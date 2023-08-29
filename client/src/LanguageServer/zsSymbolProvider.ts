@@ -36,6 +36,8 @@ export abstract class ZsSymbolProvider
                 [ContextTag.GLOBAL_FUNCTION, vscode.SymbolKind.Function],
                 [ContextTag.GLOBAL_VARIABLE, vscode.SymbolKind.Variable],
                 [ContextTag.TYPE, vscode.SymbolKind.Class],
+                [ContextTag.ENUM, vscode.SymbolKind.Enum],
+                [ContextTag.ENUM_VALUE, vscode.SymbolKind.EnumMember],
             ]
         )
         const result : vscode.SymbolInformation[] = []
@@ -65,7 +67,7 @@ export abstract class ZsSymbolProvider
             const unit = it.unit
             const symbol = it.symbol;
 
-            console.info(`process ${(symbol as any).parent?.name} ${symbol.name}`)
+            // console.info(`process ${(symbol as any).parent?.name ?? ""} ${symbol.name}`)
             const kind = kinds.get(symbol.context) ?? vscode.SymbolKind.Object
             const location = getLocation(unit, symbol);
 
