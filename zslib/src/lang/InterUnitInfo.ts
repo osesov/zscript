@@ -1,5 +1,5 @@
 import { it } from "node:test";
-import { Argument, ClassInfo, ClassMethodInfo as ClassMethod, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, Include, ClassMethodInfo } from "./UnitInfo";
+import { Argument, ClassInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, Include, ClassMethod, NamedType } from "./UnitInfo";
 
 // Get inheritance list given a class or interface (both extends and implements)
 export function getInheritance(includes: UnitInfo[], start: ClassInfo|InterfaceInfo): (ClassInfo|InterfaceInfo)[]
@@ -235,12 +235,6 @@ export function *getScopeSymbols(includes: UnitInfo[], position: Position, predi
 }
 
 
-export type DefinitionsTypes = Argument | LocalVariable
-                                | InterfaceInfo | InterfaceMethod | InterfaceProperty
-                                | ClassInfo | ClassMethod | ClassVariable | LocalVariable
-                                | DefineInfo | GlobalFunction | GlobalVariable
-                                | TypeInfo
-
 export interface Definition
 {
     fileName: string
@@ -249,10 +243,10 @@ export interface Definition
 }
 
 
-export function * getScopeDefinitions(includes: UnitInfo[], position: Position, predicate: (e:DefinitionsTypes) => boolean): Generator<Definition>
+export function * getScopeDefinitions(includes: UnitInfo[], position: Position, predicate: (e:NamedType) => boolean): Generator<Definition>
 {
 
-    function mk(unit: UnitInfo, item: DefinitionsTypes): Definition
+    function mk(unit: UnitInfo, item: NamedType): Definition
     {
         switch (item.context) {
         case ContextTag.DEFINE:
@@ -344,7 +338,7 @@ export function * getScopeDefinitions(includes: UnitInfo[], position: Position, 
         }
     }
 
-    function * visitFunctionOrMethodDefinitions(unit: UnitInfo, methodInfo: ClassMethodInfo|GlobalFunction): Generator<Definition>
+    function * visitFunctionOrMethodDefinitions(unit: UnitInfo, methodInfo: ClassMethod|GlobalFunction): Generator<Definition>
     {
         for (const it of methodInfo.args.filter(predicate)) {
             yield mk(unit, it);
@@ -400,5 +394,111 @@ export function * getScopeDefinitions(includes: UnitInfo[], position: Position, 
             for (const e of visitFunctionOrMethodDefinitions(main, it))
                 yield e;
         }
+    }
+}
+
+export type SymbolType = InterfaceInfo | InterfaceMethod | InterfaceProperty
+                                | ClassInfo | ClassMethod | ClassVariable | LocalVariable
+                                | DefineInfo | GlobalFunction | GlobalVariable
+                                | TypeInfo
+
+interface SymbolLocation
+{
+    unit: UnitInfo
+    symbol: SymbolType
+}
+
+export function * getUnitSymbols(includes: UnitInfo[], predicate: (e: NamedType) => boolean): Generator<SymbolLocation>
+{
+    if (includes.length === 0)
+        return
+
+    const seenClass = new Set<ClassInfo>
+    const seenInterface = new Set<InterfaceInfo>
+
+    function mk(unit: UnitInfo, symbol: SymbolType): SymbolLocation
+    {
+        return {unit, symbol}
+    }
+
+    const visitInterface = function *(unit: UnitInfo, ctx: InterfaceInfo): Generator<SymbolLocation> {
+        if (seenInterface.has(ctx))
+            return
+        seenInterface.add(ctx)
+
+        if (predicate(ctx))
+            yield mk(unit, ctx)
+
+        for (const it of ctx.readProp.filter(predicate))
+            yield mk(unit, it)
+
+        for (const it of ctx.writeProp.filter(predicate))
+            yield mk(unit, it)
+
+        for (const it of ctx.methods)
+            yield mk(unit, it)
+
+        for (const it of ctx.extends) {
+            const ifInfo = getInterfaceByName(includes, it)
+            if (ifInfo) {
+                for (const p of visitInterface(unit, ifInfo))
+                    yield p
+            }
+        }
+    }
+
+    const visitClass = function *(unit: UnitInfo, ctx: ClassInfo): Generator<SymbolLocation> {
+        if (seenClass.has(ctx))
+            return
+        seenClass.add(ctx)
+
+        if (predicate(ctx))
+            yield mk(unit, ctx)
+
+        for (const it of ctx.variables.filter(predicate))
+            yield mk(unit, it);
+
+        for (const it of ctx.methods.filter(predicate))
+            yield mk(unit, it)
+
+        for (const it of ctx.extends) {
+            const classInfo = getClassByName(includes, it)
+            if (classInfo) {
+                for (const it of visitClass(unit, classInfo))
+                    yield it
+            }
+        }
+
+        for (const it of ctx.implements) {
+            const ifInfo = getInterfaceByName(includes, it)
+            if (ifInfo) {
+                for (const it of visitInterface(unit, ifInfo))
+                    yield it
+            }
+        }
+    }
+
+    for (const unit of includes) {
+        for (const it of Object.values(unit.defines).filter(predicate))
+            yield mk(unit, it)
+
+        for (const it of Object.values(unit.classes).filter(predicate)) {
+            for (const e of visitClass(unit, it))
+                yield e;
+        }
+
+        for (const it of Object.values(unit.interfaces).filter(predicate)) {
+            for (const e of visitInterface(unit, it))
+                yield e;
+        }
+
+        for (const it of Object.values(unit.globalFunctions).filter(predicate))
+            yield mk(unit, it)
+
+        for (const it of Object.values(unit.globalVariables).filter(predicate))
+            yield mk(unit, it)
+
+        for (const it of Object.values(unit.types).filter(predicate))
+            yield mk(unit, it)
     }
 }

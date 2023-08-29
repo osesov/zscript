@@ -1,10 +1,10 @@
-import { ClassInfo, ClassMethodInfo, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Span, Type, TypeInfo, UnitInfo } from "./UnitInfo";
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalFunctionVariable, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, Type, TypeInfo, UnitInfo } from "./UnitInfo";
 import { FileRange } from "./zscript-parse";
 
 export class UnitInfoBuilder extends UnitInfo
 {
     // temporal state
-    private stack: (Span)[] = []
+    private stack: (SpanType)[] = []
 
     constructor(fileName: string)
     {
@@ -120,7 +120,7 @@ export class UnitInfoBuilder extends UnitInfo
     public beginClassMethod(visibility: string, type: Type, name: string, args: [Type,string,FileRange][], location: FileRange, docBlock: DocBlock)
     {
         const currentClass: ClassInfo = this.getCurrentClass()
-        const methodInfo: ClassMethodInfo = {
+        const methodInfo: ClassMethod = {
             context: ContextTag.CLASS_METHOD,
             begin: location.start,
             end: location.end,
@@ -278,12 +278,6 @@ export class UnitInfoBuilder extends UnitInfo
         return top.name
     }
 
-    public getCurrentContext(): ContextTag
-    {
-        const t = this.stack[ this.stack.length - 1];
-        return t.context ?? ContextTag.TOP_LEVEL
-    }
-
     public getCurrentClass(): ClassInfo
     {
         const t = this.stack[ this.stack.length - 1];
@@ -304,7 +298,7 @@ export class UnitInfoBuilder extends UnitInfo
         throw Error("No current interface")
     }
 
-    public getCurrentMethod(location: FileRange): ClassMethodInfo
+    public getCurrentMethod(location: FileRange): ClassMethod
     {
         const t = this.stack[ this.stack.length - 1];
 

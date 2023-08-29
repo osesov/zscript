@@ -1,4 +1,4 @@
-import { ClassInfo, ClassMethodInfo, LocalVariable, ClassVariable, GlobalFunction, GlobalFunctionVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Span, UnitInfo, UnitInfoData } from "./UnitInfo"
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, GlobalFunction, GlobalFunctionVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, UnitInfo, UnitInfoData } from "./UnitInfo"
 
 export namespace json_converter
 {
@@ -56,15 +56,15 @@ export namespace json_converter
             return newInfo as LocalVariable
         }
 
-        const methodToJson = (info: ClassMethodInfo) : ClassMethodInfo => {
+        const methodToJson = (info: ClassMethod) : ClassMethod => {
 
-            const newInfo: Partial<ClassMethodInfo> = {
+            const newInfo: Partial<ClassMethod> = {
                 ...info,
                 parent: undefined,
                 variables: info.variables.map( e => localToJson(e))
             }
 
-            return newInfo as ClassMethodInfo
+            return newInfo as ClassMethod
         }
 
         const variableToJson = (info: ClassVariable) : ClassVariable => {
@@ -232,9 +232,9 @@ export namespace json_converter
         return result;
     }
 
-    export function computeSpan(unit: UnitInfo): Span[]
+    export function computeSpan(unit: UnitInfo): SpanType[]
     {
-        const result: Span[] = []
+        const result: SpanType[] = []
 
         for (const it of Object.values(unit.classes)) {
             result.push(it)

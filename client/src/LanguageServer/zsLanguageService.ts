@@ -12,6 +12,7 @@ import { fromVscode } from '../../../zslib/src/util/vscodeUtil';
 
 import {default as subst} from 'vscode-variables'
 import { ZsHoverProvider } from './zsHoverProvider';
+import { ZsDocumentSymbolProvider, ZsWorkspaceSymbolProvider } from './zsSymbolProvider';
 
 export namespace zsLanguageService
 {
@@ -66,7 +67,7 @@ export namespace zsLanguageService
     {
 		const logger = logSystem.getLogger("zscript-lsp")
 		console.log("Activate zscript language service");
-		const documentFilter: vscode.DocumentFilter = { language: languageId, scheme: 'file' }
+		const selector: vscode.DocumentFilter = { language: languageId, scheme: 'file' }
 		const config = vscode.workspace.getConfiguration(languageId)
 		const version = context.extension.packageJSON.version
 		const fileAccessor: FileAccessor = {
@@ -81,13 +82,13 @@ export namespace zsLanguageService
 		// vscode.languages.registerDocumentLinkProvider;
 		// vscode.languages.registerDocumentSymbolProvider; // https://code.visualstudio.com/docs/editor/editingevolved#_go-to-symbol
 		// vscode.languages.registerInlayHintsProvider // https://code.visualstudio.com/docs/typescript/typescript-editing#_inlay-hints
-		// context.subscriptions.push( vscode.languages.registerHoverProvider(documentFilter, new ZsHoverProvider(repo)));
-		context.subscriptions.push(vscode.languages.registerCompletionItemProvider(documentFilter, new ZsCompletionProvider(repo) ));
-		context.subscriptions.push(vscode.languages.registerDefinitionProvider(documentFilter, new ZsDefinitionProvider(repo)) )
-		context.subscriptions.push(vscode.languages.registerHoverProvider(documentFilter, new ZsHoverProvider(repo)) )
+		context.subscriptions.push(vscode.languages.registerCompletionItemProvider(selector, new ZsCompletionProvider(repo) ));
+		context.subscriptions.push(vscode.languages.registerDefinitionProvider(selector, new ZsDefinitionProvider(repo)) )
+		context.subscriptions.push(vscode.languages.registerHoverProvider(selector, new ZsHoverProvider(repo)) )
+		context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(selector, new ZsDocumentSymbolProvider(repo)))
+		context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(new ZsWorkspaceSymbolProvider(repo)))
 		context.subscriptions.push(new ZsDocumentMonitor(repo, context))
 		context.subscriptions.push(repo)
-
     }
 
 	export function stop(): Thenable<void> | undefined {

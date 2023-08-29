@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { ZsRepository } from '../../../zslib/src/lang/zsRepository'
 import { Logger, logSystem } from '../../../zslib/src/util/logger';
 import { fromVscode, toVscode } from '../../../zslib/src/util/vscodeUtil';
-import { ClassInfo, ClassMethodInfo, LocalVariable, ClassVariable, DefineInfo, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, NameAndType, Type, TypeInfo } from '../../../zslib/src/lang/UnitInfo';
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, DefineInfo, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, NameAndType, Type, TypeInfo } from '../../../zslib/src/lang/UnitInfo';
 import { languageId } from '../common';
 import { ZsHover, ZsHoverSink } from '../../../zslib/src/services/zsHover'
 
@@ -83,7 +83,7 @@ class ZsHoverSinkImpl implements ZsHoverSink
         )
     }
 
-    setClassMethod(info: ClassMethodInfo): void
+    setClassMethod(info: ClassMethod): void
     {
         if (this.hover)
             return

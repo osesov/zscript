@@ -3,7 +3,6 @@ import { json_converter } from "./converter"
 
 export enum ContextTag
 {
-    TOP_LEVEL,
     INCLUDE,
     DEFINE,
     INTERFACE,
@@ -62,7 +61,7 @@ export interface LocalVariable extends WithContext, NameAndType
     begin: Position
     end: Position
     docBlock: DocBlock
-    parent: ClassMethodInfo
+    parent: ClassMethod
 }
 
 export interface Argument extends WithContext
@@ -83,12 +82,12 @@ export interface ClassInfo extends WithContext
     extends: string[]
     begin: Position
     end: Position
-    methods: ClassMethodInfo[]
+    methods: ClassMethod[]
     variables: ClassVariable[]
     docBlock: DocBlock
 }
 
-export interface ClassMethodInfo extends WithContext, NameAndType
+export interface ClassMethod extends WithContext, NameAndType
 {
     context: ContextTag.CLASS_METHOD
     begin: Position
@@ -171,7 +170,13 @@ export interface GlobalFunction extends WithContext, NameAndType
     docBlock: DocBlock
 }
 
-export type Span = ClassInfo | InterfaceInfo | ClassMethodInfo | GlobalFunction
+export type SpanType = ClassInfo | InterfaceInfo | ClassMethod | GlobalFunction
+export type NamedType = Argument | LocalVariable
+                                | InterfaceInfo | InterfaceMethod | InterfaceProperty
+                                | ClassInfo | ClassMethod | ClassVariable | LocalVariable
+                                | DefineInfo | GlobalFunction | GlobalVariable
+                                | TypeInfo
+
 
 export interface UnitInfoData
 {
@@ -197,7 +202,7 @@ export class UnitInfo implements UnitInfoData
     public readonly globalFunctions: UnitInfoData["globalFunctions"]
 
     // list of spanning objects in order of begin position
-    protected span: Span[]
+    protected span: SpanType[]
 
     constructor(fileName: string, data ?: UnitInfoData)
     {
@@ -230,9 +235,9 @@ export class UnitInfo implements UnitInfoData
         return new UnitInfo(fileName, obj)
     }
 
-    public getContext(position: Position): Span[]
+    public getContext(position: Position): SpanType[]
     {
-        const result: Span[] = []
+        const result: SpanType[] = []
 
         const inRange = (position: Position, begin: Position, end: Position): boolean => {
             if (position.line < begin.line)

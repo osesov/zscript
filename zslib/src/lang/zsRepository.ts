@@ -364,6 +364,18 @@ export class ZsRepository
         return result;
     }
 
+    public async getAllUnits(): Promise<UnitInfo[]>
+    {
+        const result : UnitInfo[] = []
+
+        this.unitInfo.forEach( async (_, fileName) => {
+            const u = await this.ensureFileLoaded(fileName, false);
+            if (u)
+                result.push(u);
+        })
+        return result;
+    }
+
     /// document maintenance
     public onDocumentOpen(doc: TextDocument): Promise<UnitInfo|undefined>
     {

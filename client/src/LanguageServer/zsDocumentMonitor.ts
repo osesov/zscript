@@ -32,8 +32,10 @@ export class ZsDocumentMonitor implements vscode.Disposable
                     this.logger.debug('Change doc {languageId} {name}', e.document.languageId, e.document.fileName)
 
                     repo.onDocumentChange(e.document)
-                })]);
+                }),
+            ]);
 
+        vscode.workspace.onDidChangeWorkspaceFolders((e) => this.logger.info(`ChangeWorkspaceFolders added: ${e.added.join(',')}, removed: ${e.removed.join(',')}` ))
         // vscode.workspace.onDidSaveTextDocument
         // vscode.workspace.onDidCloseTextDocument
 

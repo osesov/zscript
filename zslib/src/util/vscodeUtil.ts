@@ -65,6 +65,11 @@ export namespace toVscode
             new vscode.Position(end.line - 1, end.column - 1)
         )
     }
+
+    export function location(fileName: string, begin: Position, end: Position): vscode.Location
+    {
+        return new vscode.Location(vscode.Uri.file(fileName), range(begin, end));
+    }
 }
 
 export class VSCodeSink implements LogSink

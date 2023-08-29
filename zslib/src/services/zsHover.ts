@@ -1,5 +1,5 @@
 import { getScopeSymbols } from "../lang/InterUnitInfo";
-import { ClassInfo, ClassMethodInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, Position, UnitInfo, TypeInfo } from "../lang/UnitInfo";
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Argument, Position, UnitInfo, TypeInfo } from "../lang/UnitInfo";
 import { ZsRepository } from "../lang/zsRepository";
 import { CancellationToken, assertUnreachable } from "../util/util";
 
@@ -12,7 +12,7 @@ export interface ZsHoverSink
 
     setDefine(info: DefineInfo): void
     setClass(info: ClassInfo): void
-    setClassMethod(info: ClassMethodInfo): void
+    setClassMethod(info: ClassMethod): void
     setClassVariable(info: ClassVariable): void
 
     setGlobalVariable(info: GlobalVariable): void
