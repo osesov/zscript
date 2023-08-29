@@ -280,7 +280,11 @@ class LogSystem {
         let result = ""
         const postStrings: string[] = []
 
-        if (data instanceof Error) {
+        if (data === null || data === undefined) {
+            result += String(data);
+        }
+
+        else if (data instanceof Error) {
             result += "[" + data.name + "]:" + data.message
 
             if (data.stack)
