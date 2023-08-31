@@ -553,7 +553,7 @@ export function getScopeContext(includes: UnitInfo[], words: string[], position:
     type Predicate = (e: NamedType) => boolean
 
     const main = includes[0]
-    let currentScope: NamedType[] = main.getContext(position)
+    const currentScope: NamedType[] = main.getContext(position)
     options = options ?? {prefix: false}
 
     function findTypeBeName(type: Type): NamedType[]
@@ -659,24 +659,30 @@ export function getScopeContext(includes: UnitInfo[], words: string[], position:
         currentScope.push( ... findDefine(predicate))
         if (firstEntry) {
             for (const unit of includes) {
-                currentScope.push( ... Object.values(unit.enums).filter(predicate));
-                currentScope.push( ... Object.values(unit.classes).filter(predicate));
-                currentScope.push( ... Object.values(unit.interfaces).filter(predicate));
-                currentScope.push( ... Object.values(unit.globalFunctions).filter(predicate));
-                currentScope.push( ... Object.values(unit.globalVariables).filter(predicate));
-                currentScope.push( ... Object.values(unit.defines).filter(predicate));
-                currentScope.push( ... Object.values(unit.types).filter(predicate));
+                newScope.push( ... Object.values(unit.enums).filter(predicate));
+                newScope.push( ... Object.values(unit.classes).filter(predicate));
+                newScope.push( ... Object.values(unit.interfaces).filter(predicate));
+                newScope.push( ... Object.values(unit.globalFunctions).filter(predicate));
+                newScope.push( ... Object.values(unit.globalVariables).filter(predicate));
+                newScope.push( ... Object.values(unit.defines).filter(predicate));
+                newScope.push( ... Object.values(unit.types).filter(predicate));
             }
         }
 
         for (const it of currentScope) {
+            // if (lastEntry) {
+            //     newScope.push(it)
+            //     continue
+            // }
+
             switch(it.context) {
             case ContextTag.ARGUMENT:
             case ContextTag.CLASS_VARIABLE:
             case ContextTag.LOCAL_VARIABLE:
             case ContextTag.GLOBAL_VARIABLE:
             case ContextTag.INTERFACE_PROPERTY:
-                newScope.push( ... findTypeBeName(it.type));
+                currentScope.push( ... findTypeBeName(it.type) )
+                // newScope.push( ... findTypeBeName(it.type));
                 break;
 
             case ContextTag.CLASS:

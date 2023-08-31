@@ -66,6 +66,11 @@ export namespace fromVscode
         if (prefix) {
             word = word.substring(0, offset);
         }
+        else {
+            const dotPosition = word.indexOf('.', offset)
+            if (dotPosition >= 0)
+                word = word.substring(0, dotPosition);
+        }
 
         return word.split('.')
     }
