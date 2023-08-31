@@ -40,7 +40,13 @@ export class ZsDefinitionProvider implements DefinitionProvider
 
     async provideDefinition(document: TextDocument, position: vscode.Position, token: CancellationToken): Promise<Definition | LocationLink[]> // ProviderResult<Definition | LocationLink[]>
     {
+        const result = new ZsDefinitionSinkImpl
         const fileName = document.uri.fsPath
+        const currentLine = fromVscode.getLineAtCursor(document, position);
+        if (currentLine && this.provider.getLineDefinitions(result, fileName, position.line, currentLine)) {
+            return result.items;
+        }
+
         const word = fromVscode.getWordAtCursor(document, position)
         if (!word)
             return [];
@@ -48,7 +54,6 @@ export class ZsDefinitionProvider implements DefinitionProvider
         this.logger.info("Query definitions for {@word} in {file}", word, this.repo.stripPathPrefix(fileName));
 
         try {
-            const result = new ZsDefinitionSinkImpl
             const unit = await this.repo.onDocumentAccess(document);
             if (!unit)
                 return [];

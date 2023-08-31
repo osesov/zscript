@@ -75,6 +75,11 @@ export namespace fromVscode
         return word.split('.')
     }
 
+    export function getLineAtCursor(document: vscode.TextDocument, position: vscode.Position): string | undefined
+    {
+        return document.lineAt(position.line).text
+    }
+
 }
 
 export namespace toVscode

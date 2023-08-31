@@ -77,7 +77,7 @@ export class ZsRepository
         this.env = env
     }
 
-    private findInclude(fileName: string, baseDir: string | null): string | undefined
+    public findInclude(fileName: string, baseDir: string | null): string | undefined
     {
         if (fs.existsSync(fileName))
             return path.resolve(fileName)
