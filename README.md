@@ -42,8 +42,8 @@ This extension contributes the following settings:
 
 ## TODO
 
-- real LSP
-- save indexing to disk
+- [ ] real LSP
+- [x] save indexing to disk
 - Entities:
   - [x] interface
   - [x] class
@@ -59,9 +59,9 @@ This extension contributes the following settings:
   - [ ] final
   - [ ] abstract
   - [ ] static
-  - [ ] enum
+  - [x] enum
   - [ ] struct
-  - [ ] implements LIST
-  - [ ] extends LIST
+  - [x] implements LIST
+  - [x] extends LIST
   - [ ] extern
   - [ ] native

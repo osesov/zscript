@@ -6,6 +6,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [1.0.4]
+
+- Some language services - completion, hover, definition. (no LSP yet)
+- debug uses ".\<command\>" to execute internal commands, while the rest is passed to powerup process
+- Regular problem matcher
+- Separate problem matching over console message while debug is being run
+- Save parsed info to disk and load it on startup
+
 ## [1.0.3]
 
 - package cleanup
