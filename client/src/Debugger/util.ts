@@ -22,7 +22,7 @@ export interface CommandTarget
 export interface CommandInfo
 {
     [k: string]: CommandInfo | CommandTarget
-};
+}
 
 export function getWord(str: string): [string, string]
 {
@@ -71,19 +71,20 @@ export function getWord(str: string): [string, string]
     return [buffer, str.substring(pos).trimStart()];
 }
 
-export function executeCommand(command: CommandInfo | CommandTarget, str: string): void
+export function executeCommand(command: CommandInfo | CommandTarget, str: string): boolean
 {
     if (CommandBody in command) {
-        return command[CommandBody](str);
+        command[CommandBody](str);
+        return true;
     }
 
     const [name, rest] = getWord(str)
     const sub = command[name];
 
     if (!sub)
-        throw new Error(`Unknown command at: ${str}`)
+        return false
 
-    executeCommand(sub, rest);
+    return executeCommand(sub, rest);
 }
 
 export function mergeCommands(...command: (CommandInfo | undefined)[]): CommandInfo
@@ -106,8 +107,7 @@ export function getCommandsHelp(commands: CommandInfo): string
         for (const [name, body] of Object.entries(commands)) {
             const fullName: string = prefix + (prefix ? " " : "") + name;
 
-            if (!body) {
-            }
+            if (!body) { /* empty */ }
             else if (CommandBody in body) {
                 if (fullName.length > maxWidth)
                     maxWidth = fullName.length;
@@ -128,13 +128,11 @@ export function getCommandsHelp(commands: CommandInfo): string
         let buffer = ""
 
         for (const [name, body] of Object.entries(commands)) {
-            const fullName: string = prefix + (prefix ? " " : "") + name;
+            const fullName: string = prefix + (prefix ? " " : "") + '.' + name;
 
-            if (!body) {
-            }
+            if (!body) { /* empty */ }
             else if (CommandBody in body) {
                 const help = body[CommandHelp]
-
 
                 buffer += align(fullName, width)
                 if (help)

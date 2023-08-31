@@ -1,4 +1,3 @@
-import { EventEmitter } from 'events'
 import { TypedEmitter } from 'tiny-typed-emitter';
 import { CommandInfo } from './util';
 
@@ -18,4 +17,4 @@ export abstract class ZsDebugExchange extends TypedEmitter<ZsDebugExchangeEvents
     abstract sendString(data: string): void;
     abstract disconnect(): void;
     abstract getCommands(): CommandInfo | undefined;
-};
+}

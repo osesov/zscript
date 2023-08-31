@@ -2,7 +2,7 @@ import { ErrorDestination, Handles, InitializedEvent, LoggingDebugSession, Outpu
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { ZsDebugger, ZsDebugStackFrame, Breakpoint, ZsDebugVariable, Logger, ZsDebugConfig, SourceLocation, logger } from './ZsDebugger';
 import { DebugConfiguration } from 'vscode';
-import { CommandBody, CommandHelp, CommandInfo, addNewLine, executeCommand, getCommandsHelp, getWord, mergeCommands } from "./util";
+import { CommandBody, CommandHelp, CommandInfo, addNewLine, executeCommand, getCommandsHelp, mergeCommands } from "./util";
 
 import * as vscode from 'vscode'
 
@@ -604,7 +604,15 @@ export class ZsDebugAdapter extends LoggingDebugSession {
 
     protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments, request?: DebugProtocol.Request): void {
         if (args.context === 'repl') {
-            executeCommand(this.getCommands(), args.expression);
+            const s = args.expression.trim();
+            if (s[0] === '.') {
+                if (!executeCommand(this.getCommands(), s.substring(1))) {
+                    this.logger.core.error(`Unknown command: ${args.expression}`)
+                }
+            }
+            else {
+                this.runtime.sendInput(s);
+            }
             this.sendResponse(response);
         }
         else if (args.context === 'hover' || args.context === 'watch') {

@@ -114,10 +114,10 @@ interface ZsDebugRuntimeEvents {
     'processExit': (code: number | null) => void
 }
 
-export declare interface ZsDebugger {
-    on<T extends keyof ZsDebugRuntimeEvents>(event: T, listener: ZsDebugRuntimeEvents[T]): this;
-    off<T extends keyof ZsDebugRuntimeEvents>(event: T, listener: ZsDebugRuntimeEvents[T]): this;
-}
+// export declare interface ZsDebugger {
+//     on<T extends keyof ZsDebugRuntimeEvents>(event: T, listener: ZsDebugRuntimeEvents[T]): this;
+//     off<T extends keyof ZsDebugRuntimeEvents>(event: T, listener: ZsDebugRuntimeEvents[T]): this;
+// }
 
 export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
 
@@ -176,7 +176,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
             this.process = null;
 
             if (pid) {
-                const timeout = (msec) => new Promise<boolean>((resolve) => setTimeout(() => resolve(false), msec));
+                const timeout = (msec: number) => new Promise<boolean>((resolve) => setTimeout(() => resolve(false), msec));
                 const processDone = new Promise<boolean>((resolve) => process.on('close', () => resolve(true)));
                 treeKill(pid, 'SIGTERM');
 
@@ -187,7 +187,10 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
 
                     return Promise.any([processDone, timeout(5000)])
                 })
-                .then( (completed) => this.logger.core.error(`Unable to wait for process completion ${pid}`))
+                .then( (completed) => {
+                    if (!completed)
+                        this.logger.core.error(`Unable to wait for process completion ${pid}`)
+                })
             }
         }
         this.started = false;
@@ -621,6 +624,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
             cwd: cwd,
             env: env,
             shell: true,
+            stdio: ['pipe', 'pipe', 'pipe']
         }
 
         const spawnedProcess = child_process.spawn(program, args, options);
@@ -631,7 +635,7 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
             this.asyncEmit('processExit', code)
         })
         spawnedProcess.on('error', (err: Error) => this.logger.core.error(`Process error: ${err}`));
-        (spawnedProcess.stdin as any).setEncoding('utf-8');
+        // (spawnedProcess.stdin as any).setEncoding('utf-8');
 
         this.logger.core.info(`Started process: ${program}, pid: ${spawnedProcess.pid}`);
         this.process = spawnedProcess;
@@ -642,8 +646,13 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         if (!this.process || !this.process.stdin)
             return
 
+        // NOTE: then showApplicationLogs is true and showApplicationOutput is false,
+        // you would not see any answer from powerup, because it does not go to ZS logs!
         this.process.stdin.cork()
-        this.process.stdin.write(addNewLine(str), () => {});
+        this.process.stdin.write(addNewLine(str), 'utf-8', (err) => {
+            if (err)
+                this.logger.core.important(String(err))
+        });
         this.process.stdin.uncork()
     }
 
@@ -698,4 +707,4 @@ export class ZsDebugger extends TypedEmitter<ZsDebugRuntimeEvents>
         return value;
     }
 
-};
+}
