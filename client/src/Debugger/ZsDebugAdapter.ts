@@ -4,6 +4,8 @@ import { ZsDebugger, ZsDebugStackFrame, Breakpoint, ZsDebugVariable, Logger, ZsD
 import { DebugConfiguration } from 'vscode';
 import { CommandBody, CommandHelp, CommandInfo, addNewLine, executeCommand, getCommandsHelp, getWord, mergeCommands } from "./util";
 
+import * as vscode from 'vscode'
+
 export interface FileAccessor {
     isWindows: boolean;
     readFile(path: string): Promise<Uint8Array>;
@@ -56,7 +58,10 @@ class LoggerImpl implements Logger {
     public readonly child_process: logger.ChildProcess
     public readonly comm: logger.Comm
 
-    constructor(private config: ZsDebugConfig, private sendEvent: (event: DebugProtocol.Event) => void, private connected: () => boolean) {
+    constructor(private config: ZsDebugConfig,
+        private sendEvent: (event: DebugProtocol.Event) => void,
+        private connected: () => boolean,
+        private diagnosticCollection: vscode.DiagnosticCollection) {
 
         this.core = {
             important: (msg: string): void => {
@@ -81,11 +86,15 @@ class LoggerImpl implements Logger {
 
         this.child_process = {
             stdout: (msg: string): void => {
+                if (!this.connected())
+                    this.problemMatcher(msg)
                 if (!this.connected() || this.config.showApplicationOutput)
                     this.sendEvent(new OutputEvent(addNewLine(msg), 'stdout'));
             },
 
             stderr: (msg: string): void => {
+                if (!this.connected())
+                    this.problemMatcher(msg)
                 if (!this.connected() || this.config.showApplicationOutput)
                     this.sendEvent(new OutputEvent(addNewLine(msg), 'stderr'));
             },
@@ -100,6 +109,50 @@ class LoggerImpl implements Logger {
                 if (this.config.showDevNetworkOutput)
                     this.sendEvent(new OutputEvent(addNewLine(msg), 'console'))
             }
+        }
+    }
+
+    private static problemRe = /^(Error|Warning):\s+(.*)[(]([0-9]+):([0-9]+)[)]\s+(.+)$/
+    private diagnostics = new Map<string, vscode.Diagnostic[]>
+
+    public clear()
+    {
+        this.diagnostics.clear();
+        this.diagnosticCollection.clear()
+    }
+
+    problemMatcher(str: string): void
+    {
+        let m: RegExpExecArray | null;
+        const lines = str.split('\n').map(e => e.trim());
+
+        for (const text of lines) {
+            if ((m = LoggerImpl.problemRe.exec(text)) == null) {
+                continue;
+            }
+
+            const severity = m[1]
+            const fileName = m[2];
+            const lineno = m[3]
+            const column = m[4]
+            const message = m[5];
+
+            if (!this.diagnostics.has(fileName)) {
+                this.diagnostics.set(fileName, []);
+            }
+
+            const fileDiag = this.diagnostics.get(fileName) ?? [];
+            const start = new vscode.Position(Number(lineno) - 1, Number(column) - 1);
+            const end = new vscode.Position(Number(lineno), 0);
+
+            const range = new vscode.Range(start, end)
+
+            fileDiag.push( new vscode.Diagnostic(
+                range,
+                message,
+                severity === "Error" ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning
+            ))
+            this.diagnosticCollection.set( vscode.Uri.file(fileName), fileDiag)
         }
     }
 }
@@ -118,16 +171,18 @@ export class ZsDebugAdapter extends LoggingDebugSession {
     private roots: DebugProtocol.Variable[] | null = null
     private config: ZsDebugConfig
     private logger: LoggerImpl
+    private diagnosticCollection: vscode.DiagnosticCollection
 
-    public constructor(fileAccessor: FileAccessor, config: DebugConfiguration) {
+    public constructor(fileAccessor: FileAccessor, config: DebugConfiguration, diagnosticCollection: vscode.DiagnosticCollection) {
         super("zs-debug.txt");
 
         // zero-based lines and columns
         this.setDebuggerLinesStartAt1(false);
         this.setDebuggerColumnsStartAt1(false);
 
+        this.diagnosticCollection = diagnosticCollection
         this.config = config as ZsDebugConfig;
-        this.logger = new LoggerImpl(this.config, this.sendEvent.bind(this), () => this.connected)
+        this.logger = new LoggerImpl(this.config, this.sendEvent.bind(this), () => this.connected, diagnosticCollection)
 
         this.runtime = new ZsDebugger(this.logger, this.config);
         this.runtime.on('breakpoint', (data) => this.onBreakpoint(data));

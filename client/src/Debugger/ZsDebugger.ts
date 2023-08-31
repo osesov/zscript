@@ -87,7 +87,7 @@ export namespace logger
 
     export interface Comm
     {
-    debug(msg: string): void
+        debug(msg: string): void
     }
 }
 export interface Logger {

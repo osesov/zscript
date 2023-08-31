@@ -4,13 +4,13 @@ import { FileAccessor, ZsDebugAdapter } from './ZsDebugAdapter';
 import { languageId } from '../common';
 
 class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
-	constructor(private workspaceFileAccessor: FileAccessor)
+	constructor(private workspaceFileAccessor: FileAccessor, private diagnosticCollection: vscode.DiagnosticCollection)
 	{
 
 	}
 
 	createDebugAdapterDescriptor(_session: vscode.DebugSession): ProviderResult<vscode.DebugAdapterDescriptor> {
-		return new vscode.DebugAdapterInlineImplementation(new ZsDebugAdapter(this.workspaceFileAccessor, _session.configuration));
+		return new vscode.DebugAdapterInlineImplementation(new ZsDebugAdapter(this.workspaceFileAccessor, _session.configuration, this.diagnosticCollection));
 	}
 }
 
@@ -51,8 +51,10 @@ export function zsDebugInit(context: vscode.ExtensionContext, fileAccessor: File
 
     // TODO: register a dynamic configuration provider?
 
+	const diagnosticCollection = vscode.languages.createDiagnosticCollection(languageId);
+
     // register debug factory
-    const factory : vscode.DebugAdapterDescriptorFactory = new InlineDebugAdapterFactory(fileAccessor);
+    const factory : vscode.DebugAdapterDescriptorFactory = new InlineDebugAdapterFactory(fileAccessor, diagnosticCollection);
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('zs', factory));
     if (factory instanceof vscode.Disposable) {
 		context.subscriptions.push(factory);
