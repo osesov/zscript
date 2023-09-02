@@ -10,7 +10,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Fix showing parents in hover
 - Support post docs in some places (///< ...)
 - Support comma separated variables declaration in class
-
+- Syntax coloring improvements
+- Dump ignored strings to json for debugging
+- Support access modifier (private/public/protected) for variables
+- Preprocessor lines might be '\' terminated (untested)
 
 ## [1.0.4]
 

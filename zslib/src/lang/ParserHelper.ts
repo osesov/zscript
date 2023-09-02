@@ -30,6 +30,13 @@ export interface Condition
     selectedContext: ParseContext[]
 }
 
+export interface ParseRange
+{
+    source:string
+    start: number
+    end: number
+}
+
 export class ParseError extends Error
 {
     constructor(message: string, public location: FileRange)

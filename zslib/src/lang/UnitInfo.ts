@@ -55,6 +55,7 @@ export interface ClassVariable extends NameAndType
     end: Position
     docBlock: DocBlock
     parent: ClassInfo
+    visibility: string
 }
 
 export interface LocalVariable extends WithContext, NameAndType
@@ -202,6 +203,19 @@ export type NamedType = Argument | LocalVariable
                                 | TypeInfo | EnumInfo | EnumValue
 
 
+interface PositionEx extends Position
+{
+    offset: number
+}
+
+export interface IgnoreStatement
+{
+    position: PositionEx
+    text: string
+}
+
+export type IgnoreList = IgnoreStatement[]
+
 export interface UnitInfoData
 {
     readonly includes: { [fileName: string]: Include[] }
@@ -212,6 +226,7 @@ export interface UnitInfoData
     readonly globalVariables: { [name: string]: GlobalVariable }
     readonly globalFunctions: { [name: string]: GlobalFunction }
     readonly enums: { [name: string]: EnumInfo }
+    readonly ignores: IgnoreList
 }
 
 export class UnitInfo implements UnitInfoData
@@ -226,6 +241,7 @@ export class UnitInfo implements UnitInfoData
     public readonly globalVariables: UnitInfoData["globalVariables"]
     public readonly globalFunctions: UnitInfoData["globalFunctions"]
     public readonly enums: UnitInfoData["enums"]
+    public readonly ignores: UnitInfoData["ignores"]
 
     // list of spanning objects in order of begin position
     protected span: SpanType[]
@@ -242,6 +258,7 @@ export class UnitInfo implements UnitInfoData
         this.globalFunctions = json_converter.functionFromJson(data?.globalFunctions)
         this.enums = json_converter.enumFromJson(data?.enums)
         this.span = json_converter.computeSpan(this)
+        this.ignores = data?.ignores ?? []
     }
 
     public toJSON(): UnitInfoData
@@ -255,6 +272,7 @@ export class UnitInfo implements UnitInfoData
             globalVariables: this.globalVariables,
             globalFunctions: json_converter.functionToJson(this.globalFunctions),
             enums: json_converter.enumToJson(this.enums),
+            ignores: this.ignores
         }
     }
 

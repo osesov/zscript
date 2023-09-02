@@ -40,7 +40,8 @@ Chunk
 
     // TODO: this consumes sime unknown input to avoid errors
     // Comment and implement!
-    / IgnoreStatement
+    / t:IgnoreStatement { unitInfo.addIgnore(location(), input, range())}
+
 _
     = (
         WhiteSpace
@@ -102,7 +103,7 @@ IncludeDirective
         }
 
 PreprocessorLine
-    = [^\n\r]* '\r'? "\n"
+    = ([^\\\n\r] / [\\] Spaces? '\r'? '\n' / [\\] [^\r\n])* '\r'? "\n"
 
 Expr
     = StringToken
@@ -235,10 +236,10 @@ ClassMethod
         }
 
 ClassVariableDeclaration
-    = type:Type _ name:(@IdentToken|1.., _","_|) _ ";" p:PostDoc?
+    = visibility:(@Visibility _ )? type:Type _ name:(@IdentToken|1.., _","_|) _ ";" p:PostDoc?
         {
             helper.trace(location(), `variable ${name}, type ${type}`)
-            unitInfo.addClassVariable(type, name, location(), helper.docBlock, p)
+            unitInfo.addClassVariable(visibility, type, name, location(), helper.docBlock, p)
         }
 
 Visibility
@@ -298,8 +299,8 @@ ClassToken
     = _ "class" !IdentChar
 
 StringToken
-    = _ ["] ( [^\\"] / [\\]. )* ["]
-    / _ ['] ( [^\\'] / [\\]. )* [']
+    = _ @(["] ( [^\\"] / [\\]. )* ["] {return text()})
+    / _ @(['] ( [^\\'] / [\\]. )* ['] {return text()})
 
 NumberToken
     = _ @([0-9]+ ([.] [0-9]* ([eE] [-+] [0-9]+)? )? { return text()})

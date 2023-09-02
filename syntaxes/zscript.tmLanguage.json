@@ -1,133 +1,191 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Zodiac Script",
-	"patterns": [
-		{ "include": "#keywords" },
-		{ "include": "#comments" },
-		{ "include": "#string-single-quote" },
-		{ "include": "#string-double-quote" },
-		{ "include": "#prerocess" },
-		{ "include": "#types" },
-		{ "include": "#modifiers" },
-		{ "include": "#ident" },
-		{ "include": "#operators" },
-		{ "include": "#numbers" }
-	],
-	"repository": {
-		"keywords": {
-			"patterns": [{
-				"name": "keyword.control.zscript",
-				"match": "\\b(if|else|switch|case|default|do|while|for|return|enum|interface|class|break|continue|implements|type|const|mod|shl|shr|or|and|xor|as|not|_)\\b"
-			}]
-		},
-		"comments":{
-			"patterns": [
-				{
-					"name": "comment.block.documentation.zscript",
-					"begin": "/\\*\\*(?!/)",
-					"beginCaptures": {
-						"0": {
-							"name": "punctuation.definition.comment.ts"
-						}
-					},
-					"end": "\\*/",
-					"endCaptures": {
-						"0": {
-							"name": "punctuation.definition.comment.ts"
-						}
-					},
-					"patterns": [
-						{
-							"name": "storage.type.class.zscript",
-							"match": "(?<!\\w)@([a-zA-Z_][a-zA-Z0-9_]*)\\b"
-						}
-					]
-				},
-				{
-					"name": "comment.block.documentation.zscript",
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Zodiac Script",
+    "patterns": [
+        { "include": "#keywords" },
+        { "include": "#comments" },
+        { "include": "#string-single-quote" },
+        { "include": "#string-double-quote" },
+        { "include": "#conditionalDirective" },
+        { "include": "#includeDirective" },
+        { "include": "#defineDirective" },
+        { "include": "#types" },
+        { "include": "#modifiers" },
+        { "include": "#access" },
+        { "include": "#constructorCall" },
+        { "include": "#functionCall" },
+        { "include": "#ident" },
+        { "include": "#operators" },
+        { "include": "#numbers" }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.zscript",
+                    "match": "\\b(if|else|switch|case|default|do|while|for|return|enum|interface|class|break|continue|implements|type|const|mod|shl|shr|or|and|xor|as|not|_)\\b"
+                }
+            ]
+        },
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.block.documentation.zscript",
+                    "begin": "/\\*\\*(?!/)",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.comment.ts"
+                        }
+                    },
+                    "end": "\\*/",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.comment.ts"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "storage.type.class.zscript",
+                            "match": "(?<!\\w)@([a-zA-Z_][a-zA-Z0-9_]*)\\b"
+                        }
+                    ]
+                },
+                {
+                    "name": "comment.block.documentation.zscript",
                     "begin": "\\/\\/\\/",
                     "end": "$",
                     "contentName": "comment.line.double-slash.text.zscript"
-				},
-				{
-					"name": "comment.line.double-slash.zscript",
+                },
+                {
+                    "name": "comment.line.double-slash.zscript",
                     "begin": "\\/\\/",
                     "end": "$",
                     "contentName": "comment.line.double-slash.text.zscript"
-				},
-				{
+                },
+                {
                     "name": "comment.block.zscript",
                     "begin": "\\/\\*",
                     "end": "\\*\\/",
                     "contentName": "comment.block.text.zscript"
- 				}
-			]
-		},
-		"string-double-quote": {
-			"name": "string.quoted.double.zscript",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.zscript",
-					"match": "\\\\."
-				}
-			]
-		},
-		"string-single-quote": {
-			"name": "string.quoted.single.zscript",
-			"begin": "'",
-			"end": "'",
-			"patterns": [
-				{
-					"name": "constant.character.escape.zscript",
-					"match": "\\\\."
-				}
-			]
-		},
-		"prerocess": {
-			"match": "^\\s*#\\s*(define|if|ifdef|ifndef|elif|else|endif|include)\\b(.*)?$",
-			"captures": {
-				"1": { "name": "keyword.control.directive.conditional.zscript" },
-				"2": { "name": "variable.zscript" }
-			}
-		},
-		"ident": {
-			"name": "entity.name.zscript",
-			"match": "[a-zA-Z_][a-zA-Z0-9_]"
-		},
-		"types": {
-			"name": "entity.name.type.zscript",
-			"match": "\\b(int|str|long|bool|float|double|void|ptr|fix|byte)\\b"
-		},
-		"modifiers": {
-			"name": "keyword.other.zscript",
-			"match": "\\b(public|private|protected)\\b"
-		},
-		"operators": {
-			"name": "keyword.operator.zscript",
-			"match": "<<|>>|\\|\\||&&|==|!=|<=|>=|[-+*/%<>=!^&|!?:]"
-		},
-		"numbers": {
-			"patterns": [
-				{
-					"name": "constant.numeric.zscript",
-					"match": "[0-9]+([.][0-9]*)[uidf]?"
-				},
-				{
-					"name": "constant.numeric.zscript",
-					"match": "[0-9]+([.][0-9]*)[uidf]?"
-				},
-				{
-					"name": "constant.numeric.zscript",
-					"match": "0x[0-9A-Fa-f]+[uidf]?"
-				},
-				{
-					"name": "constant.numeric.zscript",
-					"match": "0x[0-9A-Fa-f]+[uidf]?"
-				}
-			]
-		}
-	},
-	"scopeName": "source.zscript"
+                }
+            ]
+        },
+        "string-double-quote": {
+            "name": "string.quoted.double.zscript",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.zscript",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "string-single-quote": {
+            "name": "string.quoted.single.zscript",
+            "begin": "'",
+            "end": "'",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.zscript",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "includeDirective": {
+            "patterns": [
+                {
+                    "match": "^\\s*#\\s*(include)\\b\\s+[\"]([^\"]*)[\"].*$",
+                    "captures": {
+                        "1": { "name": "meta.preprocessor.include.zscript" },
+                        "2": { "name": "string.quoted.double.include.zscript" }
+                    }
+                },
+                {
+                    "match": "^\\s*#\\s*(include)\\b\\s+[<]([^>]*)[>].*$",
+                    "captures": {
+                        "1": { "name": "meta.preprocessor.include.zscript" },
+                        "2": { "name": "string.quoted.other.lt-gt.include.zscript" }
+                    }
+                }
+            ]
+        },
+        "defineDirective": {
+            "patterns": [
+                {
+                    "match": "^\\s*#\\s*(define)\\b\\s+([a-zA-Z_][a-zA-Z_0-9]*)\\s+(.*)?$",
+                    "captures": {
+                        "1": { "name": "keyword.control.directive.define.zscript" },
+                        "2": { "name": "entity.name.function.preprocessor.zscript" },
+                        "3": { "name": "entity.name.function.call.zscript" }
+                    }
+                },
+                {
+                    "match": "^\\s*#\\s*(define)\\s+([_a-zA-Z][_a-zA-Z0-9]*)[(](\\s*[_a-zA-Z][_a-zA-Z0-9]*(?:\\s*,\\s*[_a-zA-Z][_a-zA-Z0-9]*)*\\s*)?[)]\\s+([^\r\n]*)$",
+                    "captures": {
+                        "1": { "name": "keyword.control.directive.define.zscript" },
+                        "2": { "name": "entity.name.function.preprocessor.zscript" },
+                        "3": { "name": "variable.parameter.preprocessor.zscript" },
+                        "4": { "name": "entity.name.function.call.zscript" }
+                    }
+                }
+            ]
+        },
+        "conditionalDirective": {
+            "match": "^\\s*#\\s*(if|ifdef|ifndef|elif|else|endif)\\b(.*)?$",
+            "captures": {
+                "1": { "name": "keyword.control.directive.conditional.zscript" },
+                "2": { "name": "entity.name.function.preprocessor.zscript" }
+            }
+        },
+        "access": {
+            "name": "variable.other.object.access.zscript",
+            "match": "[a-zA-Z_][a-zA-Z0-9_]*\\."
+        },
+        "functionCall": {
+            "name": "entity.name.function.member.zscript",
+            "match": "[a-zA-Z_][a-zA-Z0-9_]*\\s*[(]"
+        },
+        "constructorCall": {
+            "name": "entity.name.function.member.zscript",
+            "match": "[a-zA-Z_][a-zA-Z0-9_]*\\s*[{][}]"
+        },
+        "ident": {
+            "name": "entity.name.zscript",
+            "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+        },
+        "types": {
+            "name": "entity.name.type.zscript",
+            "match": "\\b(int|str|long|bool|float|double|void|ptr|fix|byte)\\b"
+        },
+        "modifiers": {
+            "name": "keyword.other.zscript",
+            "match": "\\b(public|private|protected)\\b"
+        },
+        "operators": {
+            "name": "keyword.operator.zscript",
+            "match": "<<|>>|\\|\\||&&|==|!=|<=|>=|[-+*/%<>=!^&|!?:]"
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.zscript",
+                    "match": "[0-9]+([.][0-9]*)[uidf]?"
+                },
+                {
+                    "name": "constant.numeric.zscript",
+                    "match": "[0-9]+([.][0-9]*)[uidf]?"
+                },
+                {
+                    "name": "constant.numeric.zscript",
+                    "match": "0x[0-9A-Fa-f]+[uidf]?"
+                },
+                {
+                    "name": "constant.numeric.zscript",
+                    "match": "0x[0-9A-Fa-f]+[uidf]?"
+                }
+            ]
+        }
+    },
+    "scopeName": "source.zscript"
 }

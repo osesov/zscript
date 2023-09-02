@@ -1,10 +1,12 @@
-import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, Type, TypeInfo, UnitInfo, EnumInfo, EnumValue } from "./UnitInfo";
+import { ParseRange } from "./ParserHelper";
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, Type, TypeInfo, UnitInfo, EnumInfo, EnumValue, IgnoreStatement } from "./UnitInfo";
 import { FileRange } from "./zscript-parse";
 
 export class UnitInfoBuilder extends UnitInfo
 {
     // temporal state
     private stack: (SpanType | EnumInfo)[] = []
+    private lastIgnore : IgnoreStatement | null = null
 
     private static combineDocs(docBlock: DocBlock, ...docs: string[]): DocBlock
     {
@@ -187,7 +189,7 @@ export class UnitInfoBuilder extends UnitInfo
         }
     }
 
-    public addClassVariable(type: Type, names: string[], location: FileRange, docBlock: DocBlock, postDoc: string)
+    public addClassVariable(visibility: string, type: Type, names: string[], location: FileRange, docBlock: DocBlock, postDoc: string)
     {
         const currentClass: ClassInfo = this.getCurrentClass()
         for (const name of names) {
@@ -197,6 +199,7 @@ export class UnitInfoBuilder extends UnitInfo
                 end: location.end,
                 name: name,
                 type: type,
+                visibility: visibility ?? "",
                 docBlock: UnitInfoBuilder.combineDocs(docBlock, postDoc),
                 parent: currentClass
             }
@@ -365,5 +368,24 @@ export class UnitInfoBuilder extends UnitInfo
             return t
 
         throw Error(`No current enum: ${location.start.line}...${location.end.line}`)
+    }
+
+    public addIgnore(location: FileRange, input: string, range: ParseRange)
+    {
+        const text = input.substring(range.start, range.end)
+        if (this.lastIgnore && range.start === this.lastIgnore.position.offset + this.lastIgnore.text.length) {
+            this.lastIgnore.text += text;
+            return;
+        }
+
+        const item: IgnoreStatement = {
+            text,
+            position: {
+                ...location.start,
+                offset: range.start,
+            }
+        }
+        this.ignores.push(item);
+        this.lastIgnore = item;
     }
 }
