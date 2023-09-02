@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+- Commands to reparse current file and show parsed json
+- Fix showing parents in hover
+- Support post docs in some places (///< ...)
+- Support comma separated variables declaration in class
+
+
 ## [1.0.4]
 
 - Some language services - completion, hover, definition. (no LSP yet)

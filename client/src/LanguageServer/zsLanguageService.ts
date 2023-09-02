@@ -89,6 +89,26 @@ export namespace zsLanguageService
 		context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(new ZsWorkspaceSymbolProvider(repo)))
 		context.subscriptions.push(new ZsDocumentMonitor(repo, context))
 		context.subscriptions.push(repo)
+
+		context.subscriptions.push(
+			vscode.commands.registerTextEditorCommand('extension.zscript.rebuildIndex',
+			(textEditor: vscode.TextEditor) => {
+			vscode.window.setStatusBarMessage("Updating index...",
+				repo.rebuildIndex(textEditor.document)
+				.catch(e => vscode.window.showErrorMessage(e)))
+		}));
+
+		context.subscriptions.push(
+			vscode.commands.registerTextEditorCommand('extension.zscript.openIndexFile',
+				(textEditor: vscode.TextEditor) => {
+					const indexFile = repo.getCacheFile(textEditor.document);
+					if (indexFile) {
+						vscode.workspace.openTextDocument(indexFile)
+							.then( doc => vscode.window.showTextDocument(doc) )
+					}
+					else
+						vscode.window.showErrorMessage("Unable to open index file");
+				}));
     }
 
 	export function stop(): Thenable<void> | undefined {

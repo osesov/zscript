@@ -332,6 +332,16 @@
                     "AskForProgramName": "extension.zscript.getProgramName"
                 }
             }
+        ],
+        "commands": [
+            {
+                "title": "ZScript: Rebuild index for current file",
+                "command": "extension.zscript.rebuildIndex"
+            },
+            {
+                "title": "ZScript: Open index file",
+                "command": "extension.zscript.openIndexFile"
+            }
         ]
     },
     "scripts": {

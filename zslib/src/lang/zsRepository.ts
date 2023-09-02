@@ -177,8 +177,8 @@ export class ZsRepository
 
     private async updateFileInfoSafe(fileName: string, doc: DocumentText, unit: FileState): Promise<UnitInfo|undefined>
     {
-        const getUnitInfo = async (): Promise<[boolean, UnitInfo]> => {
-            const result = await this.loadFromCache(fileName, doc)
+        const getUnitInfo = async (allowCache : boolean): Promise<[boolean, UnitInfo]> => {
+            const result = allowCache && await this.loadFromCache(fileName, doc)
 
             if (result)
                 return [true, result]
@@ -190,7 +190,7 @@ export class ZsRepository
         }
 
         try {
-            const [fromCache, unitInfo] = await getUnitInfo()
+            const [fromCache, unitInfo] = await getUnitInfo(unit.state !== 'update')
 
             unit.state = 'opened'
             unit.unitInfo = unitInfo
@@ -325,7 +325,7 @@ export class ZsRepository
         case 'opened':
             if (update) {
                 info.state = 'update'
-                info.updateTime = Date.now() + this.updateDelay
+                info.updateTime = force ? 0 : Date.now() + this.updateDelay
                 info.ready = promise
                 info.resolve = resolve;
             }
@@ -396,6 +396,23 @@ export class ZsRepository
     public onDocumentAccess(doc: TextDocument): Promise<UnitInfo|undefined>
     {
         return this.ensureFileLoaded(doc.fileName, false, true)
+    }
+
+    public getCacheFile(doc: TextDocument): string|undefined
+    {
+        if (!this.env.cacheDir)
+            return
+
+        const fileName = this.getCacheFileName(this.env.cacheDir, doc.fileName)
+        if (!fs.existsSync(fileName))
+            return undefined
+
+        return fileName;
+    }
+
+    public async rebuildIndex(doc: TextDocument): Promise<void>
+    {
+        await this.ensureFileLoaded(doc.fileName, true, true)
     }
 }
 

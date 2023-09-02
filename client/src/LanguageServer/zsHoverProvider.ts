@@ -66,7 +66,7 @@ class ZsHoverSinkImpl implements ZsHoverSink
 
     setClassVariable(info: ClassVariable): void
     {
-        const title = this.formatVariable(undefined, info.name, info.type)
+        const title = this.formatVariable(info.parent, info.name, info.type)
         this.append(this.format("class variable", title, info.docBlock))
     }
 
@@ -114,7 +114,7 @@ class ZsHoverSinkImpl implements ZsHoverSink
 
     setInterfaceMethod(info: InterfaceMethod): void
     {
-        const title = this.formatProto(undefined, info.name, info.type, info.args)
+        const title = this.formatProto(info.parent, info.name, info.type, info.args)
         this.append(
             this.format("method", title, info.docBlock),
             toVscode.range(info.begin, info.end)

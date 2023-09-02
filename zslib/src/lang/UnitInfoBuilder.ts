@@ -1,10 +1,15 @@
-import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, Type, TypeInfo, UnitInfo, EnumInfo } from "./UnitInfo";
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, Type, TypeInfo, UnitInfo, EnumInfo, EnumValue } from "./UnitInfo";
 import { FileRange } from "./zscript-parse";
 
 export class UnitInfoBuilder extends UnitInfo
 {
     // temporal state
     private stack: (SpanType | EnumInfo)[] = []
+
+    private static combineDocs(docBlock: DocBlock, ...docs: string[]): DocBlock
+    {
+        return [...docBlock, ...docs.filter(e => e !== null && e !== undefined)]
+    }
 
     constructor(fileName: string)
     {
@@ -67,7 +72,7 @@ export class UnitInfoBuilder extends UnitInfo
         this.span.push(classInfo)
     }
 
-    public addInterfaceMethod(type: Type, name: string, args: [Type,string][], location: FileRange, docBlock: DocBlock)
+    public addInterfaceMethod(type: Type, name: string, args: [Type,string][], location: FileRange, docBlock: DocBlock, postDoc: string)
     {
         const currentInterface = this.getCurrentInterface()
 
@@ -78,13 +83,13 @@ export class UnitInfoBuilder extends UnitInfo
             begin: location.start,
             end: location.end,
             args: args.map(e => ({ type: e[0], name: e[1]})),
-            docBlock: docBlock,
+            docBlock: UnitInfoBuilder.combineDocs(docBlock, postDoc),
             parent: currentInterface
         }
         currentInterface.methods.push(info)
     }
 
-    public addReadProperty(type: Type, name: string, location: FileRange, docBlock: DocBlock)
+    public addReadProperty(type: Type, name: string, location: FileRange, docBlock: DocBlock, postDoc: string)
     {
         const currentInterface = this.getCurrentInterface()
 
@@ -94,13 +99,13 @@ export class UnitInfoBuilder extends UnitInfo
             type: type,
             begin: location.start,
             end: location.end,
-            docBlock: docBlock,
+            docBlock: UnitInfoBuilder.combineDocs(docBlock, postDoc),
             parent: currentInterface
         }
         currentInterface.readProp.push(info)
     }
 
-    public addWriteProperty(type: Type, name: string, location: FileRange, docBlock: DocBlock)
+    public addWriteProperty(type: Type, name: string, location: FileRange, docBlock: DocBlock, postDoc: string)
     {
         const currentInterface = this.getCurrentInterface()
 
@@ -110,7 +115,7 @@ export class UnitInfoBuilder extends UnitInfo
             type: type,
             begin: location.start,
             end: location.end,
-            docBlock: docBlock,
+            docBlock: UnitInfoBuilder.combineDocs(docBlock, postDoc),
             parent: currentInterface
         }
         currentInterface.writeProp.push(info)
@@ -144,7 +149,7 @@ export class UnitInfoBuilder extends UnitInfo
         this.span.push(methodInfo)
     }
 
-    public addMethodVariables(type: Type, names: [string, FileRange][], location: FileRange, docBlock: DocBlock)
+    public addMethodVariables(type: Type, names: [string, FileRange][], location: FileRange, docBlock: DocBlock, postDoc: string)
     {
         const currentClass = this.getCurrentMethod(location)
 
@@ -155,7 +160,7 @@ export class UnitInfoBuilder extends UnitInfo
                 end: location.end,
                 name: name,
                 type: type,
-                docBlock: docBlock,
+                docBlock: UnitInfoBuilder.combineDocs(docBlock, postDoc),
                 parent: currentClass
             }
 
@@ -163,7 +168,7 @@ export class UnitInfoBuilder extends UnitInfo
         }
     }
 
-    public addFunctionVariables(type: Type, names: [string, FileRange][], location: FileRange, docBlock: DocBlock)
+    public addFunctionVariables(type: Type, names: [string, FileRange][], location: FileRange, docBlock: DocBlock, postDoc: string)
     {
         const currentFunction = this.getCurrentFunction(location)
 
@@ -174,7 +179,7 @@ export class UnitInfoBuilder extends UnitInfo
                 end: location.end,
                 name: name,
                 type: type,
-                docBlock: docBlock,
+                docBlock: UnitInfoBuilder.combineDocs(docBlock, postDoc),
                 parent: currentFunction
             }
 
@@ -182,23 +187,25 @@ export class UnitInfoBuilder extends UnitInfo
         }
     }
 
-    public addClassVariable(type: Type, name: string, location: FileRange, docBlock: DocBlock)
+    public addClassVariable(type: Type, names: string[], location: FileRange, docBlock: DocBlock, postDoc: string)
     {
         const currentClass: ClassInfo = this.getCurrentClass()
-        const info: ClassVariable = {
-            context: ContextTag.CLASS_VARIABLE,
-            begin: location.start,
-            end: location.end,
-            name: name,
-            type: type,
-            docBlock: docBlock,
-            parent: currentClass
-        }
+        for (const name of names) {
+            const info: ClassVariable = {
+                context: ContextTag.CLASS_VARIABLE,
+                begin: location.start,
+                end: location.end,
+                name: name,
+                type: type,
+                docBlock: UnitInfoBuilder.combineDocs(docBlock, postDoc),
+                parent: currentClass
+            }
 
-        currentClass.variables.push(info)
+            currentClass.variables.push(info)
+        }
     }
 
-    public addGlobalVariable(type: Type, names: [string, FileRange][], location: FileRange, docBlock: DocBlock)
+    public addGlobalVariable(type: Type, names: [string, FileRange][], location: FileRange, docBlock: DocBlock, postDoc: string)
     {
         for (const [name, location] of names) {
             const info: GlobalVariable = {
@@ -207,7 +214,7 @@ export class UnitInfoBuilder extends UnitInfo
                 end: location.end,
                 name: name,
                 type: type,
-                docBlock: docBlock
+                docBlock: UnitInfoBuilder.combineDocs(docBlock, postDoc)
             }
 
             this.globalVariables[name] = info
@@ -229,18 +236,20 @@ export class UnitInfoBuilder extends UnitInfo
         this.stack.push(info)
     }
 
-    public addEnumValue(location: FileRange, name: string, value: number|undefined, docBlock: DocBlock)
+    public addEnumValue(location: FileRange, name: string, value: number|undefined, docBlock: DocBlock, postDoc: string[])
     {
         const t = this.getCurrentEnum(location)
-        t.values.push({
+        const info: EnumValue = {
             context: ContextTag.ENUM_VALUE,
             name,
             value,
             begin: location.start,
             end: location.end,
-            docBlock: docBlock,
+            docBlock: UnitInfoBuilder.combineDocs(docBlock, ...postDoc),
             parent: t
-        })
+        }
+
+        t.values.push(info);
     }
 
     public beginGlobalFunction(type: Type, name: string, args: [Type,string,FileRange][], location: FileRange, docBlock: DocBlock)
@@ -284,7 +293,7 @@ export class UnitInfoBuilder extends UnitInfo
         })
     }
 
-    public addType(name: string, def: string, location: FileRange, docBlock: DocBlock): void
+    public addType(name: string, def: string, location: FileRange, docBlock: DocBlock, postDoc: string): void
     {
         const typeInfo: TypeInfo = {
             context: ContextTag.TYPE,
@@ -292,7 +301,7 @@ export class UnitInfoBuilder extends UnitInfo
             type: [def],
             begin: location.start,
             end: location.end,
-            docBlock: docBlock,
+            docBlock: UnitInfoBuilder.combineDocs(docBlock, postDoc),
         }
         this.types[name] = typeInfo;
     }

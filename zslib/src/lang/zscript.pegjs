@@ -52,6 +52,9 @@ DocBlock
     = WhiteSpace? doc:BlockCommentToken { return doc }
     / WhiteSpace? doc:(LineCommentToken+) { return [...doc] }
 
+PostDoc
+    = WhiteSpace? '///<' WhiteSpace @([^\r\n]* { return text()}) '\r'? '\n'
+
 IfDirective
     = HashToken Spaces? "if" !IdentChar Spaces? PreprocessorLine
         { helper.beginCondition(location()) }
@@ -114,10 +117,10 @@ Variables
     )|1.., _ "," _ |
 
 GlobalVariable
-    = type:Type _ vars:Variables _ ";"
+    = type:Type _ vars:Variables _ ";" p:PostDoc?
         {
             helper.trace(location(), `global ${vars.map(e => e[0])}, type ${type}`)
-            unitInfo.addGlobalVariable(type, vars, location(), helper.docBlock)
+            unitInfo.addGlobalVariable(type, vars, location(), helper.docBlock, p)
         }
 
 Function
@@ -146,10 +149,10 @@ InterfaceDeclaration
         }
 
 InterfaceMethodDeclaration
-    = type:Type _ name:IdentToken _ "(" args:MethodArgumentsDeclaration? ")" _ ';'
+    = type:Type _ name:IdentToken _ "(" args:MethodArgumentsDeclaration? ")" _ ';' p:PostDoc?
         {
             helper.trace(location(), 'Method: ', name)
-            unitInfo.addInterfaceMethod(type, name, args, location(), helper.docBlock)
+            unitInfo.addInterfaceMethod(type, name, args, location(), helper.docBlock, p)
         }
 
 MethodArgumentsDeclaration
@@ -161,37 +164,37 @@ MethodArgument
 
 MethodExpression
     = // &{ return ParserHelper.beginOfStatement(input, range())}
-    type:Type _ vars:Variables _ ";"
+    type:Type _ vars:Variables _ ";" p:PostDoc?
         {
             helper.trace(location(), `local ${vars.map(e => e[0])}, type ${type}`)
-            unitInfo.addMethodVariables(type, vars, location(), helper.docBlock)
+            unitInfo.addMethodVariables(type, vars, location(), helper.docBlock, p)
         }
 
 FunctionExpression
     = // &{ return ParserHelper.beginOfStatement(input, range())}
-    type:Type _ vars:Variables _ ";"
+    type:Type _ vars:Variables _ ";" p:PostDoc?
         {
             helper.trace(location(), `local ${vars.map(e => e[0])}, type ${type}`)
-            unitInfo.addFunctionVariables(type, vars, location(), helper.docBlock)
+            unitInfo.addFunctionVariables(type, vars, location(), helper.docBlock, p)
         }
 
 PropertyDeclaration
-    = type:Type _ name:IdentToken _ ";"
+    = type:Type _ name:IdentToken _ ";" p:PostDoc?
         {
             helper.trace(location(), `PropRead ${name}, type ${type}`)
-            unitInfo.addReadProperty(type, name, location(), helper.docBlock)
+            unitInfo.addReadProperty(type, name, location(), helper.docBlock, p)
         }
-    / name:IdentToken _ "=" _ type:Type ";"
+    / name:IdentToken _ "=" _ type:Type ";" p:PostDoc?
         {
             helper.trace(location(), `PropWrite ${name}, type ${type}`)
-            unitInfo.addWriteProperty(type, name, location(), helper.docBlock)
+            unitInfo.addWriteProperty(type, name, location(), helper.docBlock, p)
         }
 
 TypeDeclaration
-    = "type" _ name:IdentToken t:([^;]*) ";"
+    = "type" _ name:IdentToken _ '=' _ t:([^;]*) ";" p:PostDoc?
         {
             helper.trace(location(), `type ${name}`)
-            unitInfo.addType(name, t.join(''.trim()), location(), helper.docBlock)
+            unitInfo.addType(name, t.join(''.trim()), location(), helper.docBlock, p)
         }
 
 EnumDeclaration
@@ -203,9 +206,9 @@ EnumDeclaration
         }
 
 EnumValue
-    = name:IdentToken value:(_ "=" @NumberToken )? _ ","?
+    = name:IdentToken value:(_ "=" @NumberToken )? _ p1:PostDoc? ","? p2:PostDoc?
         {
-            unitInfo.addEnumValue(location(), name, value, helper.docBlock)
+            unitInfo.addEnumValue(location(), name, value, helper.docBlock, [p1, p2])
         }
 
 ClassDeclaration
@@ -232,10 +235,10 @@ ClassMethod
         }
 
 ClassVariableDeclaration
-    = type:Type _ name:IdentToken _ ";"
+    = type:Type _ name:(@IdentToken|1.., _","_|) _ ";" p:PostDoc?
         {
             helper.trace(location(), `variable ${name}, type ${type}`)
-            unitInfo.addClassVariable(type, name, location(), helper.docBlock)
+            unitInfo.addClassVariable(type, name, location(), helper.docBlock, p)
         }
 
 Visibility
