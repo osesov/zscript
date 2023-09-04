@@ -6,6 +6,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [1.0.5]
+
 - Commands to reparse current file and show parsed json (even if actual file was not saved)
 - Fix showing parents in hover
 - Support post docs in some places (///< ...)
