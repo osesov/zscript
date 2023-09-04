@@ -32,7 +32,8 @@ export class UnitInfoBuilder extends UnitInfo
         this.includes[name].push({
             context: ContextTag.INCLUDE,
             system: system,
-            position: location.start
+            position: location.start,
+            unit: this
         })
     }
 
@@ -40,6 +41,7 @@ export class UnitInfoBuilder extends UnitInfo
     {
         const classInfo: ClassInfo = {
             context: ContextTag.CLASS,
+            unit: this,
             name: name,
             implements: impl,
             extends: ext,
@@ -59,6 +61,7 @@ export class UnitInfoBuilder extends UnitInfo
     {
         const classInfo: InterfaceInfo = {
             context: ContextTag.INTERFACE,
+            unit: this,
             name: name,
             extends: inherit,
             begin: location.start,
@@ -80,6 +83,7 @@ export class UnitInfoBuilder extends UnitInfo
 
         const info : InterfaceMethod = {
             context: ContextTag.INTERFACE_METHOD,
+            unit: this,
             name: name,
             type: type,
             begin: location.start,
@@ -97,6 +101,7 @@ export class UnitInfoBuilder extends UnitInfo
 
         const info : InterfaceProperty = {
             context: ContextTag.INTERFACE_PROPERTY,
+            unit: this,
             name: name,
             type: type,
             begin: location.start,
@@ -113,6 +118,7 @@ export class UnitInfoBuilder extends UnitInfo
 
         const info : InterfaceProperty = {
             context: ContextTag.INTERFACE_PROPERTY,
+            unit: this,
             name: name,
             type: type,
             begin: location.start,
@@ -129,6 +135,7 @@ export class UnitInfoBuilder extends UnitInfo
         const currentClass: ClassInfo = this.getCurrentClass()
         const methodInfo: ClassMethod = {
             context: ContextTag.CLASS_METHOD,
+            unit: this,
             begin: location.start,
             end: location.end,
             name: name,
@@ -136,6 +143,7 @@ export class UnitInfoBuilder extends UnitInfo
             visibility: visibility,
             args: args.map( e=> ({
                 context: ContextTag.ARGUMENT,
+                unit: this,
                 type: e[0],
                 name: e[1],
                 begin: e[2].start,
@@ -158,6 +166,7 @@ export class UnitInfoBuilder extends UnitInfo
         for (const [name, location] of names) {
             const info: LocalVariable = {
                 context: ContextTag.LOCAL_VARIABLE,
+                unit: this,
                 begin: location.start,
                 end: location.end,
                 name: name,
@@ -177,6 +186,7 @@ export class UnitInfoBuilder extends UnitInfo
         for (const [name, location] of names) {
             const info: LocalVariable = {
                 context: ContextTag.LOCAL_VARIABLE,
+                unit: this,
                 begin: location.start,
                 end: location.end,
                 name: name,
@@ -195,6 +205,7 @@ export class UnitInfoBuilder extends UnitInfo
         for (const name of names) {
             const info: ClassVariable = {
                 context: ContextTag.CLASS_VARIABLE,
+                unit: this,
                 begin: location.start,
                 end: location.end,
                 name: name,
@@ -213,6 +224,7 @@ export class UnitInfoBuilder extends UnitInfo
         for (const [name, location] of names) {
             const info: GlobalVariable = {
                 context: ContextTag.GLOBAL_VARIABLE,
+                unit: this,
                 begin: location.start,
                 end: location.end,
                 name: name,
@@ -228,6 +240,7 @@ export class UnitInfoBuilder extends UnitInfo
     {
         const info: EnumInfo = {
             context: ContextTag.ENUM,
+            unit: this,
             begin: location.start,
             end: location.end,
             name: name,
@@ -244,6 +257,7 @@ export class UnitInfoBuilder extends UnitInfo
         const t = this.getCurrentEnum(location)
         const info: EnumValue = {
             context: ContextTag.ENUM_VALUE,
+            unit: this,
             name,
             value,
             begin: location.start,
@@ -259,12 +273,14 @@ export class UnitInfoBuilder extends UnitInfo
     {
         const methodInfo: GlobalFunction = {
             context: ContextTag.GLOBAL_FUNCTION,
+            unit: this,
             begin: location.start,
             end: location.end,
             name: name,
             type: type,
             args: args.map( e=> ({
                 context: ContextTag.ARGUMENT,
+                unit: this,
                 type: e[0],
                 name: e[1],
                 begin: e[2].start,
@@ -284,6 +300,7 @@ export class UnitInfoBuilder extends UnitInfo
         if (this.defines[name] === undefined) {
             this.defines[name] = {
                 context: ContextTag.DEFINE,
+                unit: this,
                 name: name,
                 definitions: []
             }
@@ -300,6 +317,7 @@ export class UnitInfoBuilder extends UnitInfo
     {
         const typeInfo: TypeInfo = {
             context: ContextTag.TYPE,
+            unit: this,
             name: name,
             type: [def],
             begin: location.start,

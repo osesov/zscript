@@ -1,9 +1,35 @@
-import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, GlobalFunction, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, UnitInfo, UnitInfoData, EnumInfo, EnumValue } from "./UnitInfo"
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, GlobalFunction, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, UnitInfo, UnitInfoData, EnumInfo, EnumValue, TypeInfo, DefineInfo, GlobalVariable } from "./UnitInfo"
 
 export namespace json_converter
 {
 
-    export function classFromJson(data ?: UnitInfoData["classes"]): UnitInfoData["classes"]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    export function objectMap<U extends {[k: string]: any}, T extends {[k: string]: any}, K extends keyof (T|U)>(obj: T, fn: (value: T[K], key: K) => T[K]): U
+    {
+        return Object.fromEntries(
+            Object.entries(obj).map(
+                ([k, v], i) => [k, fn(v, k as K)]
+            )
+        ) as U
+    }
+
+    export function includeFromJson(unit: UnitInfo, data ?: UnitInfoData["includes"]): UnitInfoData["includes"]
+    {
+        return objectMap(data ?? {}, (e => e.map( el => ({
+            ...el,
+            unit: unit,
+        }))) );
+    }
+
+    export function includeToJson(data: UnitInfoData["includes"]): UnitInfoData["includes"]
+    {
+        return objectMap(data ?? {}, (e => e.map( el => ({
+            ...el,
+            unit: undefined!,
+        }))) );
+    }
+
+    export function classFromJson(unit: UnitInfo, data ?: UnitInfoData["classes"]): UnitInfoData["classes"]
     {
         if (!data)
             return {}
@@ -16,19 +42,22 @@ export namespace json_converter
 
             const newClassInfo : ClassInfo = {
                 ...classInfo,
+                unit: unit,
 
                 methods: classInfo.methods.map( method => ({
                     ...method,
                     parent: classInfo,
                     variables: method.variables.map( variable => ({
                         ...variable,
-                        parent: method
+                        parent: method,
+                        unit: unit
                     }))
                 })),
 
                 variables: classInfo.variables.map( variable => ({
                     ...variable,
-                    parent: classInfo
+                    parent: classInfo,
+                    unit: unit
                 })),
             }
 
@@ -51,6 +80,7 @@ export namespace json_converter
             const newInfo: Partial<LocalVariable> = {
                 ...info,
                 parent: undefined,
+                unit: undefined,
             }
 
             return newInfo as LocalVariable
@@ -61,6 +91,7 @@ export namespace json_converter
             const newInfo: Partial<ClassMethod> = {
                 ...info,
                 parent: undefined,
+                unit: undefined,
                 variables: info.variables.map( e => localToJson(e))
             }
 
@@ -71,7 +102,8 @@ export namespace json_converter
 
             const newInfo: Partial<ClassVariable> = {
                 ...info,
-                parent: undefined
+                parent: undefined,
+                unit: undefined,
             }
 
             return newInfo as ClassVariable
@@ -80,20 +112,21 @@ export namespace json_converter
         for(const className of classes) {
             const classInfo = data[className]
 
-            const newClassInfo : ClassInfo = {
+            const newClassInfo : Partial<ClassInfo> = {
                 ...classInfo,
+                unit: undefined,
 
                 methods: classInfo.methods.map( e => methodToJson(e)),
                 variables: classInfo.variables.map( e => variableToJson(e)),
             }
 
-            result[className] = newClassInfo
+            result[className] = newClassInfo as ClassInfo
         }
 
         return result;
     }
 
-    export function interfaceFromJson(data ?: UnitInfoData["interfaces"]): UnitInfoData["interfaces"]
+    export function interfaceFromJson(unit: UnitInfo, data ?: UnitInfoData["interfaces"]): UnitInfoData["interfaces"]
     {
         if (!data)
             return {}
@@ -107,18 +140,24 @@ export namespace json_converter
             const newInterfaceInfo : InterfaceInfo = {
                 ...interfaceInfo,
 
+                unit: unit,
+
                 methods: interfaceInfo.methods.map( method => ({
                     ...method,
-                    parent: interfaceInfo
+                    parent: interfaceInfo,
+                    unit: unit,
                 })),
 
                 readProp: interfaceInfo.readProp.map( property => ({
                     ...property,
-                    parent: interfaceInfo
+                    parent: interfaceInfo,
+                    unit: unit,
                 })),
+
                 writeProp: interfaceInfo.writeProp.map( property => ({
                     ...property,
-                    parent: interfaceInfo
+                    parent: interfaceInfo,
+                    unit: unit,
                 })),
             }
 
@@ -141,6 +180,7 @@ export namespace json_converter
             const newInfo: Partial<InterfaceMethod> = {
                 ...info,
                 parent: undefined,
+                unit: undefined,
             }
 
             return newInfo as InterfaceMethod
@@ -150,7 +190,8 @@ export namespace json_converter
 
             const newInfo: Partial<InterfaceProperty> = {
                 ...info,
-                parent: undefined
+                parent: undefined,
+                unit: undefined,
             }
 
             return newInfo as InterfaceProperty
@@ -159,21 +200,22 @@ export namespace json_converter
         for(const interfaceName of interfaces) {
             const interfaceInfo = data[interfaceName]
 
-            const newInterfaceInfo : InterfaceInfo = {
+            const newInterfaceInfo : Partial<InterfaceInfo> = {
                 ...interfaceInfo,
+                unit: undefined,
 
                 methods: interfaceInfo.methods.map( e => methodToJson(e)),
                 readProp: interfaceInfo.readProp.map( e => propertyToJson(e)),
                 writeProp: interfaceInfo.writeProp.map( e => propertyToJson(e)),
             }
 
-            result[interfaceName] = newInterfaceInfo
+            result[interfaceName] = newInterfaceInfo as InterfaceInfo
         }
 
         return result;
     }
 
-    export function functionFromJson(data ?: UnitInfoData["globalFunctions"]): UnitInfoData["globalFunctions"]
+    export function functionFromJson(unit: UnitInfo, data ?: UnitInfoData["globalFunctions"]): UnitInfoData["globalFunctions"]
     {
         if (!data)
             return {}
@@ -186,10 +228,12 @@ export namespace json_converter
 
             const newFunctionInfo : GlobalFunction = {
                 ...functionInfo,
+                unit: unit,
 
                 variables: functionInfo.variables.map( variable => ({
                     ...variable,
-                    parent: functionInfo
+                    parent: functionInfo,
+                    unit: unit,
                 })),
             }
 
@@ -211,7 +255,8 @@ export namespace json_converter
 
             const newInfo: Partial<LocalVariable> = {
                 ...info,
-                parent: undefined
+                parent: undefined,
+                unit: undefined,
             }
 
             return newInfo as LocalVariable
@@ -220,19 +265,20 @@ export namespace json_converter
         for(const name of functions) {
             const info = data[name]
 
-            const newInfo : GlobalFunction = {
+            const newInfo : Partial<GlobalFunction> = {
                 ...info,
 
+                unit: undefined,
                 variables: info.variables.map( e => variableToJson(e)),
             }
 
-            result[name] = newInfo
+            result[name] = newInfo as GlobalFunction
         }
 
         return result;
     }
 
-    export function enumFromJson(data ?: UnitInfoData["enums"]): UnitInfoData["enums"]
+    export function enumFromJson(unit: UnitInfo, data ?: UnitInfoData["enums"]): UnitInfoData["enums"]
     {
         if (!data)
             return {}
@@ -245,10 +291,12 @@ export namespace json_converter
 
             const newEnumInfo : EnumInfo = {
                 ...enumInfo,
+                unit: unit,
 
                 values: enumInfo.values.map( value => ({
                     ...value,
-                    parent: enumInfo
+                    parent: enumInfo,
+                    unit: unit,
                 })),
             }
 
@@ -270,7 +318,8 @@ export namespace json_converter
 
             const newInfo: Partial<EnumValue> = {
                 ...info,
-                parent: undefined
+                parent: undefined,
+                unit: undefined,
             }
 
             return newInfo as EnumValue
@@ -279,16 +328,159 @@ export namespace json_converter
         for(const enumName of enums) {
             const enumInfo = data[enumName]
 
-            const newEnumInfo : EnumInfo = {
+            const newEnumInfo : Partial<EnumInfo> = {
                 ...enumInfo,
+                unit: undefined,
 
                 values: enumInfo.values.map( e => valueToJson(e)),
             }
 
-            result[enumName] = newEnumInfo
+            result[enumName] = newEnumInfo as EnumInfo
         }
 
         return result;
+    }
+
+    export function typeFromJson(unit: UnitInfo, data ?: UnitInfoData["types"]): UnitInfoData["types"]
+    {
+        if (!data)
+            return {}
+
+        const items = Object.keys(data)
+        const result: UnitInfoData["types"] = {}
+
+        for(const itemName of items) {
+            const itemInfo = data[itemName]
+
+            const newItemInfo : TypeInfo = {
+                ...itemInfo,
+                unit: unit,
+            }
+
+            result[itemName] = newItemInfo
+        }
+
+        return result;
+    }
+
+    export function typeToJson(data ?: UnitInfoData["types"]): UnitInfoData["types"]
+    {
+        if (!data)
+            return {}
+
+        const items = Object.keys(data)
+        const result: UnitInfoData["types"] = {}
+
+        for(const itemName of items) {
+            const itemInfo = data[itemName]
+
+            const newItemInfo : Partial<TypeInfo> = {
+                ...itemInfo,
+                unit: undefined,
+            }
+
+            result[itemName] = newItemInfo as TypeInfo
+        }
+
+        return result;
+    }
+
+    export function defineFromJson(unit: UnitInfo, data ?: UnitInfoData["defines"]): UnitInfoData["defines"]
+    {
+        if (!data)
+            return {}
+
+        const items = Object.keys(data)
+        const result: UnitInfoData["defines"] = {}
+
+        for(const itemName of items) {
+            const itemInfo = data[itemName]
+
+            const newItemInfo : DefineInfo = {
+                ...itemInfo,
+                unit: unit,
+            }
+
+            result[itemName] = newItemInfo
+        }
+
+        return result;
+    }
+
+    export function defineToJson(data ?: UnitInfoData["defines"]): UnitInfoData["defines"]
+    {
+        if (!data)
+            return {}
+
+        const items = Object.keys(data)
+        const result: UnitInfoData["defines"] = {}
+
+        for(const itemName of items) {
+            const itemInfo = data[itemName]
+
+            const newItemInfo : Partial<DefineInfo> = {
+                ...itemInfo,
+                unit: undefined,
+            }
+
+            result[itemName] = newItemInfo as DefineInfo
+        }
+
+        return result;
+    }
+
+    export function globalVariableFromJson(unit: UnitInfo, data ?: UnitInfoData["globalVariables"]): UnitInfoData["globalVariables"]
+    {
+        if (!data)
+            return {}
+
+        const items = Object.keys(data)
+        const result: UnitInfoData["globalVariables"] = {}
+
+        for(const itemName of items) {
+            const itemInfo = data[itemName]
+
+            const newItemInfo : GlobalVariable = {
+                ...itemInfo,
+                unit: unit,
+            }
+
+            result[itemName] = newItemInfo
+        }
+
+        return result;
+    }
+
+    export function globalVariableToJson(data ?: UnitInfoData["globalVariables"]): UnitInfoData["globalVariables"]
+    {
+        if (!data)
+            return {}
+
+        const items = Object.keys(data)
+        const result: UnitInfoData["globalVariables"] = {}
+
+        for(const itemName of items) {
+            const itemInfo = data[itemName]
+
+            const newItemInfo : Partial<GlobalVariable> = {
+                ...itemInfo,
+                unit: undefined,
+            }
+
+            result[itemName] = newItemInfo as GlobalVariable
+        }
+
+        return result;
+    }
+
+    export function ignoreFromJson(unit: UnitInfo, data ?: UnitInfoData["ignores"]): UnitInfoData["ignores"]
+    {
+        return data ?? [];
+    }
+
+    export function ignoreToJson(data: UnitInfoData["ignores"]): UnitInfoData["ignores"]
+    {
+        return data;
     }
 
     export function computeSpan(unit: UnitInfo): SpanType[]

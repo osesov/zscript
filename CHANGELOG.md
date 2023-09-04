@@ -6,7 +6,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
-- Commands to reparse current file and show parsed json
+- Commands to reparse current file and show parsed json (even if actual file was not saved)
 - Fix showing parents in hover
 - Support post docs in some places (///< ...)
 - Support comma separated variables declaration in class
@@ -14,6 +14,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Dump ignored strings to json for debugging
 - Support access modifier (private/public/protected) for variables
 - Preprocessor lines might be '\' terminated (untested)
+- Fix definitions to show location of parent classes/interfaces correctly
+- Outline view works (see file pane)
 
 ## [1.0.4]
 

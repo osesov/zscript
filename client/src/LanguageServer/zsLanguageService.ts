@@ -100,11 +100,17 @@ export namespace zsLanguageService
 
 		context.subscriptions.push(
 			vscode.commands.registerTextEditorCommand('extension.zscript.openIndexFile',
-				(textEditor: vscode.TextEditor) => {
-					const indexFile = repo.getCacheFile(textEditor.document);
-					if (indexFile) {
-						vscode.workspace.openTextDocument(indexFile)
+				async (textEditor: vscode.TextEditor) => {
+					const indexFile = await repo.getCacheForDocument(textEditor.document);
+					if ("fileName" in indexFile) {
+						vscode.workspace.openTextDocument(indexFile.fileName)
 							.then( doc => vscode.window.showTextDocument(doc) )
+					}
+
+					else if ("data" in indexFile) {
+						vscode.workspace.openTextDocument({language: indexFile.format, content: indexFile.data})
+							.then( doc => vscode.window.showTextDocument(doc) )
+
 					}
 					else
 						vscode.window.showErrorMessage("Unable to open index file");

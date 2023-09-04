@@ -350,12 +350,13 @@
         "esbuild": "npm run esbuild-base -- --sourcemap",
         "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
         "test-compile": "tsc -p ./",
-        "vscode:prepublish": "node build.js",
+        "vscode:prepublish": "npm run build",
         "package": "vsce package",
         "up": "npm run package && code --install-extension ./zscript-${npm_package_version}.vsix",
         "postinstall": "cd server && npm install && cd ..",
         "server-watch": "cd server && npm run watch",
-        "watch": "node ./build.js watch"
+        "watch": "node ./build.js watch",
+        "build": "node ./build.js build"
     },
     "repository": {
         "type": "git",

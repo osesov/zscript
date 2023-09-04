@@ -1,5 +1,5 @@
 import { getScopeDefinitions } from "../lang/InterUnitInfo";
-import { ContextTag, Position } from "../lang/UnitInfo";
+import { Position } from "../lang/UnitInfo";
 import { CancellationToken } from "../util/util";
 import { ZsRepository } from "../lang/zsRepository";
 import * as path from 'path'

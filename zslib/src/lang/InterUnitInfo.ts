@@ -1,5 +1,4 @@
-import { it } from "node:test";
-import { Argument, ClassInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, Include, ClassMethod, NamedType, EnumInfo, EnumValue, SpanType, Type } from "./UnitInfo";
+import { Argument, ClassInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, ClassMethod, NamedType, EnumInfo, EnumValue, Type } from "./UnitInfo";
 
 // Get inheritance list given a class or interface (both extends and implements)
 export function getInheritance(includes: UnitInfo[], start: ClassInfo|InterfaceInfo): (ClassInfo|InterfaceInfo)[]
@@ -254,49 +253,50 @@ export interface Definition
     fileName: string
     begin: Position
     end: Position
+    item: NamedType
 }
 
 
 export function * getScopeDefinitions(includes: UnitInfo[], position: Position, predicate: (e:NamedType) => boolean): Generator<Definition>
 {
 
-    function mk(unit: UnitInfo, item: NamedType): Definition
+    function mk(item: NamedType): Definition
     {
         switch (item.context) {
         case ContextTag.DEFINE:
-            return { fileName: unit.fileName, begin: item.definitions[0].begin, end: item.definitions[0].end }
+            return { fileName: item.unit.fileName, begin: item.definitions[0].begin, end: item.definitions[0].end, item: item }
 
         // case ContextTag.INCLUDE:
         //     return { fileName: unit.fileName, begin: item.position, end: item.position};
 
         default:
-            return { fileName: unit.fileName, begin: item.begin, end: item.end }
+            return { fileName: item.unit.fileName, begin: item.begin, end: item.end, item: item }
         }
     }
 
     function * visitDefineDefinitions(unit: UnitInfo): Generator<Definition>
     {
         for (const it of Object.values(unit.defines).filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
     }
 
     function * visitTypeDefinitions(unit: UnitInfo): Generator<Definition>
     {
         for (const it of Object.values(unit.classes).filter(predicate)) {
-            yield mk(unit, it);
+            yield mk(it);
         }
 
         for (const it of Object.values(unit.interfaces).filter(predicate)) {
-            yield mk(unit, it);
+            yield mk(it);
         }
 
         for (const it of Object.values(unit.types).filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
 
         for (const it of Object.values(unit.enums)) {
-            for (const e of visitEnum(unit, it)) {
+            for (const e of visitEnum(it)) {
                 yield e
             }
         }
@@ -305,77 +305,77 @@ export function * getScopeDefinitions(includes: UnitInfo[], position: Position, 
     function * visitGlobalsDefinitions(unit: UnitInfo): Generator<Definition>
     {
         for (const it of Object.values(unit.globalFunctions).filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
 
         for (const it of Object.values(unit.globalVariables).filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
     }
 
-    function * visitClassDefinitions(unit: UnitInfo, classInfo: ClassInfo): Generator<Definition>
+    function * visitClassDefinitions(classInfo: ClassInfo): Generator<Definition>
     {
         for (const it of classInfo.methods.filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
 
         for (const it of classInfo.variables.filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
     }
 
-    function * visitInterfaceDefinitions(unit: UnitInfo, interfaceInfo: InterfaceInfo): Generator<Definition>
+    function * visitInterfaceDefinitions(interfaceInfo: InterfaceInfo): Generator<Definition>
     {
         for (const it of interfaceInfo.methods.filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
 
         for (const it of interfaceInfo.readProp.filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
 
         for (const it of interfaceInfo.writeProp.filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
     }
 
-    function * visitClassInheritance(unit: UnitInfo, info: ClassInfo|InterfaceInfo): Generator<Definition>
+    function * visitClassInheritance(info: ClassInfo|InterfaceInfo): Generator<Definition>
     {
         const inheritance = getInheritance(includes, info)
 
         for (const it of inheritance) {
             switch(it.context) {
             case ContextTag.CLASS:
-                for (const e of visitClassDefinitions(unit, it))
+                for (const e of visitClassDefinitions(it))
                     yield e;
                 break
 
             case ContextTag.INTERFACE:
-                for (const e of visitInterfaceDefinitions(unit, it))
+                for (const e of visitInterfaceDefinitions(it))
                     yield e;
                 break;
             }
         }
     }
 
-    function * visitFunctionOrMethodDefinitions(unit: UnitInfo, methodInfo: ClassMethod|GlobalFunction): Generator<Definition>
+    function * visitFunctionOrMethodDefinitions(methodInfo: ClassMethod|GlobalFunction): Generator<Definition>
     {
         for (const it of methodInfo.args.filter(predicate)) {
-            yield mk(unit, it);
+            yield mk(it);
         }
 
         for (const it of methodInfo.variables.filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
     }
 
-    function * visitEnum(unit: UnitInfo, enumInfo: EnumInfo): Generator<Definition>
+    function * visitEnum(enumInfo: EnumInfo): Generator<Definition>
     {
         if (predicate(enumInfo))
-            yield mk(unit, enumInfo)
+            yield mk(enumInfo)
 
         for (const it of enumInfo.values.filter(predicate)) {
-            yield mk(unit, it)
+            yield mk(it)
         }
     }
 
@@ -402,26 +402,26 @@ export function * getScopeDefinitions(includes: UnitInfo[], position: Position, 
                 //     assertUnreachable(it.context);
 
         case ContextTag.CLASS:
-            for (const e of visitClassDefinitions(main, it))
+            for (const e of visitClassDefinitions(it))
                 yield e;
 
-            for (const e of visitClassInheritance(main, it))
+            for (const e of visitClassInheritance(it))
                 yield e;
 
             break;
 
         case ContextTag.INTERFACE:
-            for (const e of visitInterfaceDefinitions(main, it))
+            for (const e of visitInterfaceDefinitions(it))
                 yield e;
 
-            for (const e of visitClassInheritance(main, it))
+            for (const e of visitClassInheritance(it))
                 yield e;
 
             break;
 
         case ContextTag.CLASS_METHOD:
         case ContextTag.GLOBAL_FUNCTION:
-            for (const e of visitFunctionOrMethodDefinitions(main, it))
+            for (const e of visitFunctionOrMethodDefinitions(it))
                 yield e;
         }
     }
@@ -533,7 +533,7 @@ export function * getUnitSymbols(includes: UnitInfo[], predicate: (e: NamedType)
 
         for (const it of Object.values(unit.enums).filter(predicate)) {
             for (const e of visitEnum(unit, it))
-                yield mk(unit, it)
+                yield e
         }
 
         for (const it of Object.values(unit.globalFunctions).filter(predicate))

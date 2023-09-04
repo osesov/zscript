@@ -43,6 +43,7 @@ export interface NameAndType
 export interface Include extends WithContext
 {
     context: ContextTag.INCLUDE
+    unit: UnitInfo
     system: boolean
     position: Position
 }
@@ -50,6 +51,7 @@ export interface Include extends WithContext
 export interface ClassVariable extends NameAndType
 {
     context: ContextTag.CLASS_VARIABLE
+    unit: UnitInfo
 
     begin: Position
     end: Position
@@ -61,6 +63,8 @@ export interface ClassVariable extends NameAndType
 export interface LocalVariable extends WithContext, NameAndType
 {
     context: ContextTag.LOCAL_VARIABLE
+    unit: UnitInfo
+
     begin: Position
     end: Position
     docBlock: DocBlock
@@ -70,6 +74,7 @@ export interface LocalVariable extends WithContext, NameAndType
 export interface Argument extends WithContext
 {
     context: ContextTag.ARGUMENT
+    unit: UnitInfo
 
     type: Type
     name: string
@@ -80,6 +85,8 @@ export interface Argument extends WithContext
 export interface ClassInfo extends WithContext
 {
     context: ContextTag.CLASS
+    unit: UnitInfo
+
     name: string
     implements: string[]
     extends: string[]
@@ -93,6 +100,8 @@ export interface ClassInfo extends WithContext
 export interface ClassMethod extends WithContext, NameAndType
 {
     context: ContextTag.CLASS_METHOD
+    unit: UnitInfo
+
     begin: Position
     end: Position
     parent: ClassInfo
@@ -106,6 +115,8 @@ export interface ClassMethod extends WithContext, NameAndType
 export interface TypeInfo extends WithContext, NameAndType
 {
     context: ContextTag.TYPE
+    unit: UnitInfo
+
     begin: Position
     end: Position
     docBlock: DocBlock
@@ -114,6 +125,8 @@ export interface TypeInfo extends WithContext, NameAndType
 export interface InterfaceMethod extends NameAndType
 {
     context: ContextTag.INTERFACE_METHOD
+    unit: UnitInfo
+
     begin: Position
     end: Position
     args: NameAndType[]
@@ -124,6 +137,8 @@ export interface InterfaceMethod extends NameAndType
 export interface InterfaceProperty extends NameAndType
 {
     context: ContextTag.INTERFACE_PROPERTY
+    unit: UnitInfo
+
     begin: Position
     end: Position
     docBlock: DocBlock
@@ -133,6 +148,8 @@ export interface InterfaceProperty extends NameAndType
 export interface InterfaceInfo extends WithContext
 {
     context: ContextTag.INTERFACE
+    unit: UnitInfo
+
     name: string
     extends: string[]
     begin: Position
@@ -146,8 +163,9 @@ export interface InterfaceInfo extends WithContext
 export interface DefineInfo
 {
     context: ContextTag.DEFINE
-    name: string
+    unit: UnitInfo
 
+    name: string
     definitions: {
         begin: Position,
         end: Position,
@@ -158,6 +176,8 @@ export interface DefineInfo
 export interface GlobalVariable extends NameAndType
 {
     context: ContextTag.GLOBAL_VARIABLE
+    unit: UnitInfo
+
     begin: Position
     end: Position
     docBlock: DocBlock
@@ -166,6 +186,8 @@ export interface GlobalVariable extends NameAndType
 export interface GlobalFunction extends WithContext, NameAndType
 {
     context: ContextTag.GLOBAL_FUNCTION
+    unit: UnitInfo
+
     begin: Position
     end: Position
     args: Argument[]
@@ -175,8 +197,9 @@ export interface GlobalFunction extends WithContext, NameAndType
 
 export interface EnumValue extends WithContext
 {
-
     context: ContextTag.ENUM_VALUE
+    unit: UnitInfo
+
     name: string
     value?: number
     parent: EnumInfo
@@ -188,6 +211,8 @@ export interface EnumValue extends WithContext
 export interface EnumInfo extends WithContext
 {
     context: ContextTag.ENUM
+    unit: UnitInfo
+
     name: string
     begin: Position
     end: Position
@@ -249,30 +274,30 @@ export class UnitInfo implements UnitInfoData
     constructor(fileName: string, data ?: UnitInfoData)
     {
         this.fileName = fileName;
-        this.includes = data?.includes ?? {}
-        this.classes = json_converter.classFromJson(data?.classes)
-        this.interfaces = json_converter.interfaceFromJson(data?.interfaces)
-        this.types = data?.types ?? {}
-        this.defines = data?.defines ?? {}
-        this.globalVariables = data?.globalVariables ?? {}
-        this.globalFunctions = json_converter.functionFromJson(data?.globalFunctions)
-        this.enums = json_converter.enumFromJson(data?.enums)
+        this.includes = json_converter.includeFromJson(this, data?.includes)
+        this.classes = json_converter.classFromJson(this, data?.classes)
+        this.interfaces = json_converter.interfaceFromJson(this, data?.interfaces)
+        this.types = json_converter.typeFromJson(this, data?.types)
+        this.defines = json_converter.defineFromJson(this, data?.defines)
+        this.globalVariables = json_converter.globalVariableFromJson(this, data?.globalVariables)
+        this.globalFunctions = json_converter.functionFromJson(this, data?.globalFunctions)
+        this.enums = json_converter.enumFromJson(this, data?.enums)
+        this.ignores = json_converter.ignoreFromJson(this, data?.ignores)
         this.span = json_converter.computeSpan(this)
-        this.ignores = data?.ignores ?? []
     }
 
     public toJSON(): UnitInfoData
     {
         return {
-            includes: this.includes,
-            defines: this.defines,
+            includes: json_converter.includeToJson(this.includes),
+            defines: json_converter.defineToJson(this.defines),
             classes: json_converter.classToJson(this.classes),
             interfaces: json_converter.interfaceToJson(this.interfaces),
-            types: this.types,
-            globalVariables: this.globalVariables,
+            types: json_converter.typeToJson(this.types),
+            globalVariables: json_converter.globalVariableToJson(this.globalVariables),
             globalFunctions: json_converter.functionToJson(this.globalFunctions),
             enums: json_converter.enumToJson(this.enums),
-            ignores: this.ignores
+            ignores: json_converter.ignoreToJson(this.ignores)
         }
     }
 

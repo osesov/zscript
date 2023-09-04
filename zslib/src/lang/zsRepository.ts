@@ -398,16 +398,19 @@ export class ZsRepository
         return this.ensureFileLoaded(doc.fileName, false, true)
     }
 
-    public getCacheFile(doc: TextDocument): string|undefined
+    public async getCacheForDocument(doc: TextDocument): Promise<({fileName : string} | {data: string, format: 'json'})>
     {
+        const unitInfo = await this.ensureFileLoaded(doc.fileName, false, true)
+        const fileData = () => JSON.stringify(unitInfo?.toJSON(), undefined, 4)
+
         if (!this.env.cacheDir)
-            return
+            return { data: fileData(), format: 'json' }
 
         const fileName = this.getCacheFileName(this.env.cacheDir, doc.fileName)
         if (!fs.existsSync(fileName))
-            return undefined
+            return { data: fileData(), format: 'json'  }
 
-        return fileName;
+        return { fileName: fileName, format: 'json'  }
     }
 
     public async rebuildIndex(doc: TextDocument): Promise<void>
