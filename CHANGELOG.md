@@ -6,6 +6,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+- Show definitions for multi-word strings
+
 ## [1.0.5]
 
 - Commands to reparse current file and show parsed json (even if actual file was not saved)

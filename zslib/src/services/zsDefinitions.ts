@@ -1,5 +1,5 @@
-import { getScopeDefinitions } from "../lang/InterUnitInfo";
-import { Position } from "../lang/UnitInfo";
+import { getScopeContext, getScopeDefinitions } from "../lang/InterUnitInfo";
+import { ContextTag, Position } from "../lang/UnitInfo";
 import { CancellationToken } from "../util/util";
 import { ZsRepository } from "../lang/zsRepository";
 import * as path from 'path'
@@ -15,16 +15,26 @@ export class ZsDefinitions
     {
     }
 
-    public async getDefinitions(result: ZsDefinitionSink, initialFileName: string, word: string, position: Position, token: CancellationToken): Promise<void>
+    public async getDefinitions(result: ZsDefinitionSink, initialFileName: string, words: string[], position: Position, token: CancellationToken): Promise<void>
     {
         const includes = await this.repo.getIncludeQueue(initialFileName)
 
-        for (const it of getScopeDefinitions(includes, position, (e) => e.name === word)) {
-            result.add(it.fileName, it.begin, it.end);
+        for (const it of getScopeContext(includes, words, position, {prefix: false})) {
+            if (it.context === ContextTag.DEFINE)
+                it.definitions.forEach( e => result.add(it.unit.fileName, e.begin, e.end))
+            else
+                result.add(it.unit.fileName, it.begin, it.end);
 
             if (token.isCancellationRequested)
                 break;
         }
+
+        // for (const it of getScopeDefinitions(includes, position, (e) => e.name === word)) {
+        //     result.add(it.fileName, it.begin, it.end);
+
+        //     if (token.isCancellationRequested)
+        //         break;
+        // }
     }
 
     public getLineDefinitions(result: ZsDefinitionSink, fileName: string, lineno: number, text: string): boolean

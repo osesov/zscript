@@ -47,19 +47,19 @@ export class ZsDefinitionProvider implements DefinitionProvider
             return result.items;
         }
 
-        const word = fromVscode.getWordAtCursor(document, position)
-        if (!word)
+        const words = fromVscode.getWordsAtCursor(document, position)
+        if (words.length === 0)
             return [];
 
-        this.logger.info("Query definitions for {@word} in {file}", word, this.repo.stripPathPrefix(fileName));
+        this.logger.info("Query definitions for {@word} in {file}", words, this.repo.stripPathPrefix(fileName));
 
         try {
             const unit = await this.repo.onDocumentAccess(document);
             if (!unit)
                 return [];
 
-            await this.provider.getDefinitions(result, fileName, word.word, fromVscode.position(position), token)
-            this.logger.info(`Definitions for ${word.word} at ${word.offset}:
+            await this.provider.getDefinitions(result, fileName, words, fromVscode.position(position), token)
+            this.logger.info(`Definitions for ${words.join('.')}:
                 ${result.items.map(e => e.targetUri.fsPath + ":" + e.targetRange.start.line)}`)
 
             return result.items;
