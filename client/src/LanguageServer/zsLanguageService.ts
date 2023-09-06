@@ -41,9 +41,20 @@ export namespace zsLanguageService
 	}
 
 	// eslint-disable-next-line no-inner-declarations
+	function getAsString(config: vscode.WorkspaceConfiguration, name: string, defValue: string): string
+	{
+		const value = config.get(name)
+		if (!value)
+			return subst(defValue)
+
+		return subst(String(value))
+	}
+
+	// eslint-disable-next-line no-inner-declarations
 	function loadConfiguration(version: string, config: vscode.WorkspaceConfiguration, logger: Logger): ZsEnvironment
 	{
-		const indexFiles: string[] = getAsStringArray(config, 'indexFiles').map(e => subst(e))
+		const ignore = getAsStringArray(config, 'ignore').map(e => subst(e))
+		const basePath: string = getAsString(config, 'basePath', "${workspaceFolder}")
 		const includeDirs: string[] = getAsStringArray(config, 'includeDir').map(e => subst(e))
 		const stripPathPrefix: string[] = getAsStringArray(config, 'stripPathPrefix').map(appendDelimiter).map(e=>subst(e))
 		let cacheDir: string | undefined = config.get('cacheDir');
@@ -55,7 +66,8 @@ export namespace zsLanguageService
 		const settings: ZsEnvironment = {
 			version: version,
 			includeDirs: includeDirs,
-			indexFiles: indexFiles,
+			basePath: basePath,
+			ignore: ignore,
 			stripPathPrefix: stripPathPrefix,
 			cacheDir: cacheDir,
 		}

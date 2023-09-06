@@ -2,6 +2,11 @@ import { ParseRange } from "./ParserHelper";
 import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, ContextTag, DocBlock, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, Type, TypeInfo, UnitInfo, EnumInfo, EnumValue, IgnoreStatement } from "./UnitInfo";
 import { FileRange } from "./zscript-parse";
 
+export interface UnitInfoBuilderState
+{
+    stack: (SpanType | EnumInfo)[]
+}
+
 export class UnitInfoBuilder extends UnitInfo
 {
     // temporal state
@@ -21,6 +26,18 @@ export class UnitInfoBuilder extends UnitInfo
     build(): UnitInfo
     {
         return this; //new UnitInfo(this.fileName)
+    }
+
+    public saveState(): UnitInfoBuilderState
+    {
+        return {
+            stack: this.stack.slice(0)
+        }
+    }
+
+    public restoreState(state: UnitInfoBuilderState): void
+    {
+        this.stack.splice(0, this.stack.length, ...state.stack)
     }
 
     public addInclude(system: boolean, name: string, location: FileRange): void
@@ -79,7 +96,7 @@ export class UnitInfoBuilder extends UnitInfo
 
     public addInterfaceMethod(type: Type, name: string, args: [Type,string][], location: FileRange, docBlock: DocBlock, postDoc: string)
     {
-        const currentInterface = this.getCurrentInterface()
+        const currentInterface = this.getCurrentInterface(location)
 
         const info : InterfaceMethod = {
             context: ContextTag.INTERFACE_METHOD,
@@ -97,7 +114,7 @@ export class UnitInfoBuilder extends UnitInfo
 
     public addReadProperty(type: Type, name: string, location: FileRange, docBlock: DocBlock, postDoc: string)
     {
-        const currentInterface = this.getCurrentInterface()
+        const currentInterface = this.getCurrentInterface(location)
 
         const info : InterfaceProperty = {
             context: ContextTag.INTERFACE_PROPERTY,
@@ -114,7 +131,7 @@ export class UnitInfoBuilder extends UnitInfo
 
     public addWriteProperty(type: Type, name: string, location: FileRange, docBlock: DocBlock, postDoc: string)
     {
-        const currentInterface = this.getCurrentInterface()
+        const currentInterface = this.getCurrentInterface(location)
 
         const info : InterfaceProperty = {
             context: ContextTag.INTERFACE_PROPERTY,
@@ -132,7 +149,7 @@ export class UnitInfoBuilder extends UnitInfo
 
     public beginClassMethod(visibility: string, type: Type, name: string, args: [Type,string,FileRange][], location: FileRange, docBlock: DocBlock)
     {
-        const currentClass: ClassInfo = this.getCurrentClass()
+        const currentClass: ClassInfo = this.getCurrentClass(location)
         const methodInfo: ClassMethod = {
             context: ContextTag.CLASS_METHOD,
             unit: this,
@@ -201,7 +218,7 @@ export class UnitInfoBuilder extends UnitInfo
 
     public addClassVariable(visibility: string, type: Type, names: string[], location: FileRange, docBlock: DocBlock, postDoc: string)
     {
-        const currentClass: ClassInfo = this.getCurrentClass()
+        const currentClass: ClassInfo = this.getCurrentClass(location)
         for (const name of names) {
             const info: ClassVariable = {
                 context: ContextTag.CLASS_VARIABLE,
@@ -338,24 +355,23 @@ export class UnitInfoBuilder extends UnitInfo
         return top.name
     }
 
-    public getCurrentClass(): ClassInfo
+    public getCurrentClass(location: FileRange): ClassInfo
     {
         const t = this.stack[ this.stack.length - 1];
 
         if (t.context === ContextTag.CLASS)
             return t
 
-        throw Error("No current class")
+        throw Error(`${location.source}:${location.start.line}:${location.start.column}: No current class`)
     }
 
-    public getCurrentInterface(): InterfaceInfo
+    public getCurrentInterface(location: FileRange): InterfaceInfo
     {
         const t = this.stack[ this.stack.length - 1];
 
         if (t.context === ContextTag.INTERFACE)
             return t
-
-        throw Error("No current interface")
+        throw Error(`${location.source}:${location.start.line}:${location.start.column}: No current interface`)
     }
 
     public getCurrentMethod(location: FileRange): ClassMethod
@@ -365,7 +381,7 @@ export class UnitInfoBuilder extends UnitInfo
         if (t.context === ContextTag.CLASS_METHOD)
             return t
 
-        throw Error(`No current method: ${location.start.line}...${location.end.line}`)
+        throw Error(`${location.source}:${location.start.line}:${location.start.column}: No current interface`)
     }
 
     public getCurrentFunction(location: FileRange): GlobalFunction
@@ -375,7 +391,7 @@ export class UnitInfoBuilder extends UnitInfo
         if (t.context === ContextTag.GLOBAL_FUNCTION)
             return t
 
-        throw Error(`No current function: ${location.start.line}...${location.end.line}`)
+        throw Error(`${location.source}:${location.start.line}:${location.start.column}: No current interface`)
     }
 
     public getCurrentEnum(location: FileRange): EnumInfo
@@ -385,7 +401,7 @@ export class UnitInfoBuilder extends UnitInfo
         if (t.context === ContextTag.ENUM)
             return t
 
-        throw Error(`No current enum: ${location.start.line}...${location.end.line}`)
+        throw Error(`${location.source}:${location.start.line}:${location.start.column}: No current interface`)
     }
 
     public addIgnore(location: FileRange, input: string, range: ParseRange)

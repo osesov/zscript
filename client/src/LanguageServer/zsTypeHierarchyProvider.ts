@@ -57,6 +57,8 @@ export class ZsTypeHierarchyProvider implements vscode.TypeHierarchyProvider
                 break
             }
         }
+        if (result.length === 0)
+            return undefined;
         return result;
     }
 
@@ -74,11 +76,29 @@ export class ZsTypeHierarchyProvider implements vscode.TypeHierarchyProvider
             ZsTypeHierarchyProvider.add(result, e)
         })
 
+        if (result.length === 0)
+            return undefined;
         return result;
     }
 
     async provideTypeHierarchySubtypes(item: vscode.TypeHierarchyItem, token: vscode.CancellationToken): Promise<vscode.TypeHierarchyItem[] | undefined> {
         const result: vscode.TypeHierarchyItem[] = []
+
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Window,
+            title: "INDEX",
+            cancellable: true
+        }, async (progress, token) => {
+            await this.repo.indexAllFiles((fileName: string, index: number, total: number) => {
+                const shortFileName = this.repo.stripPathPrefix(fileName)
+                progress.report({ message: `[${index}/${total}] ` + shortFileName})
+                return token.isCancellationRequested
+            });
+        })
+
+        if (token.isCancellationRequested)
+            return undefined
+
         const includes = await this.repo.getAllUnits();
         const name = item.name;
         const entity = getClassByName(includes, name) ?? getInterfaceByName(includes, name);
@@ -91,6 +111,8 @@ export class ZsTypeHierarchyProvider implements vscode.TypeHierarchyProvider
             ZsTypeHierarchyProvider.add(result, e)
         })
 
+        if (result.length === 0)
+            return undefined;
         return result;
     }
 

@@ -3709,7 +3709,7 @@ peg$parsePreprocessorLine() {
   function // @ts-ignore
 peg$parseExpr() {
 // @ts-ignore
-    var s0, s1;
+    var s0;
 
 // @ts-ignore
     s0 = peg$parseStringToken();
@@ -3724,44 +3724,17 @@ peg$parseExpr() {
 // @ts-ignore
         if (s0 === peg$FAILED) {
 // @ts-ignore
-          s0 = [];
-// @ts-ignore
           if (peg$r8.test(input.charAt(peg$currPos))) {
 // @ts-ignore
-            s1 = input.charAt(peg$currPos);
+            s0 = input.charAt(peg$currPos);
 // @ts-ignore
             peg$currPos++;
 // @ts-ignore
           } else {
 // @ts-ignore
-            s1 = peg$FAILED;
+            s0 = peg$FAILED;
 // @ts-ignore
             if (peg$silentFails === 0) { peg$fail(peg$e21); }
-          }
-// @ts-ignore
-          if (s1 !== peg$FAILED) {
-// @ts-ignore
-            while (s1 !== peg$FAILED) {
-// @ts-ignore
-              s0.push(s1);
-// @ts-ignore
-              if (peg$r8.test(input.charAt(peg$currPos))) {
-// @ts-ignore
-                s1 = input.charAt(peg$currPos);
-// @ts-ignore
-                peg$currPos++;
-// @ts-ignore
-              } else {
-// @ts-ignore
-                s1 = peg$FAILED;
-// @ts-ignore
-                if (peg$silentFails === 0) { peg$fail(peg$e21); }
-              }
-            }
-// @ts-ignore
-          } else {
-// @ts-ignore
-            s0 = peg$FAILED;
           }
         }
       }
@@ -3775,7 +3748,7 @@ peg$parseExpr() {
   function // @ts-ignore
 peg$parseVariables() {
 // @ts-ignore
-    var s0, s1, s2, s3, s4, s5, s6, s7, s8, s9;
+    var s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10;
 
 // @ts-ignore
     s0 = peg$currPos;
@@ -3809,7 +3782,23 @@ peg$parseVariables() {
 // @ts-ignore
         s7 = peg$parse_();
 // @ts-ignore
-        s8 = peg$parseExpr();
+        s8 = [];
+// @ts-ignore
+        s9 = peg$parseExpr();
+// @ts-ignore
+        if (s9 !== peg$FAILED) {
+// @ts-ignore
+          while (s9 !== peg$FAILED) {
+// @ts-ignore
+            s8.push(s9);
+// @ts-ignore
+            s9 = peg$parseExpr();
+          }
+// @ts-ignore
+        } else {
+// @ts-ignore
+          s8 = peg$FAILED;
+        }
 // @ts-ignore
         if (s8 !== peg$FAILED) {
 // @ts-ignore
@@ -3914,7 +3903,23 @@ peg$parseVariables() {
 // @ts-ignore
             s8 = peg$parse_();
 // @ts-ignore
-            s9 = peg$parseExpr();
+            s9 = [];
+// @ts-ignore
+            s10 = peg$parseExpr();
+// @ts-ignore
+            if (s10 !== peg$FAILED) {
+// @ts-ignore
+              while (s10 !== peg$FAILED) {
+// @ts-ignore
+                s9.push(s10);
+// @ts-ignore
+                s10 = peg$parseExpr();
+              }
+// @ts-ignore
+            } else {
+// @ts-ignore
+              s9 = peg$FAILED;
+            }
 // @ts-ignore
             if (s9 !== peg$FAILED) {
 // @ts-ignore
@@ -10939,9 +10944,9 @@ peg$parseOperator() {
 
 
 // @ts-ignore
-    const helper = new ParserHelper
-// @ts-ignore
     const unitInfo = new UnitInfoBuilder(options.fileName, options.fullFileName)
+// @ts-ignore
+    const helper = new ParserHelper(unitInfo)
 
 // @ts-ignore
   peg$result = peg$startRuleFunction();
@@ -11111,11 +11116,7 @@ export type PreprocessorLine = [
   "\r" | null,
   "\n"
 ];
-export type Expr =
-  | StringToken
-  | BlockCommentToken
-  | LineCommentToken
-  | string[];
+export type Expr = StringToken | BlockCommentToken | LineCommentToken | string;
 export type Variables = [
   IdentToken,
   {

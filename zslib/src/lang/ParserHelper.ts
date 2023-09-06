@@ -1,8 +1,8 @@
 import * as parser from "./zscript-parse"
 import { FileRange } from "./zscript-parse"
 import { logSystem } from "../util/logger"
-import { DocBlock, UnitInfo } from "./UnitInfo"
-import { UnitInfoBuilder } from "./UnitInfoBuilder"
+import { DocBlock } from "./UnitInfo"
+import { UnitInfoBuilder, UnitInfoBuilderState } from "./UnitInfoBuilder"
 
 export enum CurrentContext
 {
@@ -21,13 +21,19 @@ export interface ParseContext
     name: string
 }
 
-export interface Condition
+export interface State
 {
     context: ParseContext[]
+    builderState: UnitInfoBuilderState
+}
+
+export interface Condition
+{
+    state: State
     depth: number
     minDepth: number
 
-    selectedContext: ParseContext[]
+    selectedState: State
 }
 
 export interface ParseRange
@@ -57,6 +63,7 @@ export class ParserHelper
         in: CurrentContext.TOP_LEVEL,
         depth: 0
     }
+    private builder: UnitInfoBuilder;
 
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -86,6 +93,11 @@ export class ParserHelper
             return m![1].trim()
         })
         return result
+    }
+
+    constructor(builder: UnitInfoBuilder)
+    {
+        this.builder = builder
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
@@ -136,15 +148,21 @@ export class ParserHelper
             && this.currentContext[this.currentContext.length-1].in === CurrentContext.ENUM
     }
 
-    saveContext() : ParseContext[]
+    saveContext() : State
     {
-        return ParserHelper.objArrayCopy(this.currentContext)
+        const state: State = {
+            context: ParserHelper.objArrayCopy(this.currentContext),
+            builderState: this.builder.saveState()
+        }
+
+        return state
     }
 
-    restoreContext(context: ParseContext[]): void
+    restoreContext(state: State): void
     {
-        const newContext = ParserHelper.objArrayCopy(context);
+        const newContext = ParserHelper.objArrayCopy(state.context);
         this.currentContext.splice(0, this.currentContext.length, ...newContext)
+        this.builder.restoreState(state.builderState)
     }
 
     topContext(): ParseContext
@@ -178,10 +196,10 @@ export class ParserHelper
 
     beginCondition(location: FileRange): void
     {
-        const context = this.saveContext()
+        const state = this.saveContext()
         this.conditions.push({
-            context: context,
-            selectedContext: context,
+            state: state,
+            selectedState: state,
             depth: 0,
             minDepth: Number.MAX_VALUE
         })
@@ -196,11 +214,11 @@ export class ParserHelper
             throw new ParseError("no current condition", location);
 
         if (condition.depth < condition.minDepth) {
-            condition.selectedContext = this.saveContext();
+            condition.selectedState = this.saveContext();
             condition.minDepth = condition.depth
         }
         condition.depth = 0;
-        this.restoreContext(condition.context)
+        this.restoreContext(condition.state)
         this.trace(location, `${location.source}:${location.start.line}:${location.start.column}: RESTART COND`);
     }
 
@@ -211,11 +229,11 @@ export class ParserHelper
             throw new ParseError("no current condition", location);
 
         if (condition.depth < condition.minDepth) {
-            condition.selectedContext = this.saveContext();
+            condition.selectedState = this.saveContext();
             condition.minDepth = condition.depth
         }
 
-        this.restoreContext(condition.selectedContext)
+        this.restoreContext(condition.selectedState)
         this.conditions.pop();
         this.trace(location, `${location.source}:${location.start.line}:${location.start.column}: END COND`);
     }

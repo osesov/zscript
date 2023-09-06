@@ -1,3 +1,5 @@
+import { globIterate } from 'glob'
+import { minimatch } from 'minimatch'
 
 export interface CancellationToken
 {
@@ -30,4 +32,28 @@ export interface Word
     word: string
     prefix: string
     offset: number
+}
+
+export async function * listFiles(patterns: string[]): AsyncGenerator<string>
+{
+    const filterOut : string[] = []
+    const filterIn : string[] = []
+
+    for (const e of patterns) {
+        if (e.startsWith('!')) {
+            filterOut.push(e.substring(1))
+            continue
+        }
+
+        filterIn.push(e)
+    }
+
+    for await(const file of globIterate(filterIn)) {
+        console.log('Check', file)
+        const exclude = filterOut.find( rule => minimatch(file, rule));
+        if (exclude)
+            continue;
+
+        yield file
+    }
 }

@@ -82,7 +82,13 @@
                     "default": [],
                     "description": "Set of dirs to use as include roots"
                 },
-                "zscript.indexFiles": {
+                "zscript.basePath": {
+                    "scope": "window",
+                    "type": "string",
+                    "default": "${workspaceFolder}",
+                    "description": "Base path to access project files. ${workspaceFolder} by default"
+                },
+                "zscript.ignore": {
                     "scope": "window",
                     "type": "array",
                     "items": {
@@ -90,7 +96,7 @@
                         "format": "file"
                     },
                     "default": [],
-                    "description": "Set of glob mask dirs index on startup"
+                    "description": "Ignore some files"
                 },
                 "zscript.stripPathPrefix": {
                     "scope": "window",
@@ -112,7 +118,13 @@
                 "zscript.logLevel": {
                     "scope": "window",
                     "type": "string",
-                    "enum": [ "FATAL", "ERROR", "WARN", "INFO", "DEBUG" ]
+                    "enum": [
+                        "FATAL",
+                        "ERROR",
+                        "WARN",
+                        "INFO",
+                        "DEBUG"
+                    ]
                 }
             }
         },
@@ -396,6 +408,8 @@
     },
     "dependencies": {
         "glob": "^10.3.4",
+        "ignore": "^5.2.4",
+        "minimatch": "^9.0.3",
         "strftime": "^0.10.2",
         "tiny-typed-emitter": "^2.1.0",
         "tree-kill": "^1.2.2",

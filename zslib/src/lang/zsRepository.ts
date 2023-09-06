@@ -2,20 +2,20 @@ import { UnitInfo, UnitInfoData } from './UnitInfo'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
+import * as ignore from 'ignore'
 
 // parser
 import './zscript.pegjs'
 import * as parser from './zscript-parse'
 import { Logger, logSystem } from '../util/logger'
-import { assertUnreachable, getPromise } from '../util/util'
+import { assertUnreachable, getPromise, listFiles } from '../util/util'
 import { Queue } from '../util/queue'
-import { globIterate } from 'glob'
-
 export interface ZsEnvironment
 {
     version: string
     includeDirs: string[]
-    indexFiles: string[]
+    basePath: string
+    ignore: string[]
     stripPathPrefix: string[]
     cacheDir?: string
 }
@@ -66,43 +66,71 @@ export class ZsRepository
     private updateDelay = 10000
     private fileAccessor: FileAccessor
     private writeQueue: Promise<void> = Promise.resolve()
+    private ignore: ignore.Ignore
+    private indexAll: {
+        ready: Promise<void>
+        started: boolean
+    }
 
     constructor(env: ZsEnvironment, fileAccessor: FileAccessor)
     {
         this.env = env
         this.fileAccessor = fileAccessor
         this.logger = logSystem.getLogger(ZsRepository);
-        this.indexAllFiles();
+        this.ignore = ignore.default().add(this.env.ignore)
+        this.indexAll = this.resetIndexAllFiles()
     }
 
     updateEnvironment(env: ZsEnvironment)
     {
         this.env = env
-        this.indexAllFiles();
+        this.ignore = ignore.default().add(this.env.ignore)
+        this.indexAll = this.resetIndexAllFiles()
     }
 
-    public findInclude(fileName: string, baseDir: string | null): string | undefined
+    resetIndexAllFiles(): ZsRepository["indexAll"]
     {
+        const promise = Promise.reject('Not parsed')
+        promise.catch(() => {})
+
+        return {
+            ready: promise,
+            started: false
+        }
+    }
+
+    public findInclude(fileName: string, baseDir: string | null, options: { direct: boolean }): string | undefined
+    {
+        const checkFile = (p: string): string | undefined => {
+            if (!fs.statSync(p).isFile())
+                return undefined
+
+            if (!options.direct && fileName.startsWith(this.env.basePath)) {
+                const r = path.relative(this.env.basePath, p)
+
+                if (this.ignore.ignores(r))
+                   return undefined
+            }
+
+            return p
+        }
+
         if (fs.existsSync(fileName)) {
-            if (fs.statSync(fileName).isFile())
-                return path.resolve(fileName)
-            return undefined
+            return checkFile(fileName)
         }
 
         // TODO: this must be applicable to non-system includes only
         if (baseDir) {
             const p = path.resolve(baseDir, fileName);
             if (fs.existsSync(p)) {
-                if (fs.statSync(p).isFile())
-                    return path.resolve(baseDir, fileName)
-                return undefined
+                return checkFile(p)
             }
         }
 
         for(const dir of this.env.includeDirs) {
             const p = path.resolve(dir, fileName)
-            if (fs.existsSync(p) && fs.statSync(p).isFile()) {
-                return p;
+            if (fs.existsSync(p)) {
+                return checkFile(p)
             }
         }
 
@@ -162,7 +190,6 @@ export class ZsRepository
             this.logger.error("Unable to load cache file {file}: {@error}", fileName, e)
             return undefined;
         }
-
     }
 
     private async saveFileCache(fileName: string, doc: DocumentText, unit: UnitInfo): Promise<void>
@@ -215,7 +242,7 @@ export class ZsRepository
 
             const baseName = path.dirname(fileName)
             for (const it of Object.keys(unitInfo.includes)) {
-                const n = this.findInclude(it, baseName);
+                const n = this.findInclude(it, baseName, {direct: false});
                 if (!n) {
                     this.logger.warn("Unable to find include {file}. Update 'zscript.includeDir'.", it)
                     continue
@@ -311,7 +338,7 @@ export class ZsRepository
     {
         const { promise, resolve } = getPromise<UnitInfo|undefined>()
 
-        const fullName = this.findInclude(fileName, null);
+        const fullName = this.findInclude(fileName, null, {direct: true});
         if (!fullName) {
             this.logger.warn("File not found: {file}", fileName)
             return Promise.resolve(undefined)
@@ -367,7 +394,7 @@ export class ZsRepository
     {
         const queue = new Queue
         const result: UnitInfo[] = []
-        const fullName = this.findInclude(fileName, null)
+        const fullName = this.findInclude(fileName, null, { direct: true})
         if (!fullName)
             return result;
 
@@ -382,7 +409,7 @@ export class ZsRepository
                 result.push(unit)
 
                 const baseName = path.dirname(includeFile)
-                const newIncludes = Object.keys(unit.includes).map( e=> this.findInclude(e, baseName))
+                const newIncludes = Object.keys(unit.includes).map( e=> this.findInclude(e, baseName, {direct: false}))
                 queue.add(newIncludes)
             }
         }
@@ -439,11 +466,43 @@ export class ZsRepository
         await this.ensureFileLoaded(doc.fileName, true, true)
     }
 
-    private async indexAllFiles(): Promise<void>
+    private isQueued(fileName: string) : boolean
     {
-        for await (const file of globIterate(this.env.indexFiles)) {
-            await this.ensureFileLoaded(file, false, false)
-        }
+        return this.loadingQueue.has(fileName) || this.unitInfo.has(fileName)
+    }
+
+    public async indexAllFiles(progress: (fileName: string, index: number, total: number) => boolean): Promise<void>
+    {
+        if (this.indexAll.started)
+            return this.indexAll.ready
+
+        this.indexAll.started = true
+        return this.indexAll.ready = Promise.resolve()
+        .then(async () => {
+            let ready = Promise.resolve(false)
+            let total = 0;
+
+            for await (const file of listFiles([this.env.basePath + '/**/*.{zs,zi}'])) {
+                if (!fs.statSync(file).isFile()) {
+                    continue
+                }
+
+                if (this.isQueued(file))
+                    continue
+
+                const index = total++;
+
+                ready = ready.then((done) => {
+                    if (done || progress(file, index, total))
+                        return true
+
+                    // this.logger.info(`Load ${index}/${total} ${file}`)
+                    return this.ensureFileLoaded(file, false, true).then( () => false )
+                })
+            }
+
+            return ready
+        }).then(() => {})
     }
 }
 

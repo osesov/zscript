@@ -1,4 +1,4 @@
-import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, GlobalFunction, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, UnitInfo, UnitInfoData, EnumInfo, EnumValue, TypeInfo, DefineInfo, GlobalVariable } from "./UnitInfo"
+import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, GlobalFunction, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, UnitInfo, UnitInfoData, EnumInfo, EnumValue, TypeInfo, DefineInfo, GlobalVariable, Argument } from "./UnitInfo"
 
 export namespace json_converter
 {
@@ -92,7 +92,8 @@ export namespace json_converter
                 ...info,
                 parent: undefined,
                 unit: undefined,
-                variables: info.variables.map( e => localToJson(e))
+                variables: info.variables.map( e => localToJson(e)),
+                args: info.args.map( e => argToJson(e))
             }
 
             return newInfo as ClassMethod
@@ -243,6 +244,16 @@ export namespace json_converter
         return result;
     }
 
+    export function argToJson(info: Argument) : Argument
+    {
+        const newInfo: Partial<Argument> = {
+            ...info,
+            unit: undefined,
+        }
+
+        return newInfo as Argument
+    }
+
     export function functionToJson(data ?: UnitInfoData["globalFunctions"]): UnitInfoData["globalFunctions"]
     {
         if (!data)
@@ -262,6 +273,7 @@ export namespace json_converter
             return newInfo as LocalVariable
         }
 
+
         for(const name of functions) {
             const info = data[name]
 
@@ -270,6 +282,7 @@ export namespace json_converter
 
                 unit: undefined,
                 variables: info.variables.map( e => variableToJson(e)),
+                args: info.args.map( e => argToJson(e))
             }
 
             result[name] = newInfo as GlobalFunction

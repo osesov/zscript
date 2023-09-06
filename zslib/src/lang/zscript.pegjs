@@ -1,7 +1,7 @@
 /* Simplified ZS grammar */
 {
-    const helper = new ParserHelper
     const unitInfo = new UnitInfoBuilder(options.fileName, options.fullFileName)
+    const helper = new ParserHelper(unitInfo)
 }
 
 start
@@ -109,11 +109,11 @@ Expr
     = StringToken
     / BlockCommentToken
     / LineCommentToken
-    / [^=;,]+
+    / [^=;,]
 
 Variables
     = ( // &{return ParserHelper.beginOfStatement(input, range())}
-        name:IdentToken ( _ "=" _ Expr )?
+        name:IdentToken ( _ "=" _ Expr+ )?
         { return [name, location()] }
     )|1.., _ "," _ |
 

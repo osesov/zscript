@@ -75,4 +75,9 @@ export class Queue
             this.queue.push(e)
         })
     }
+
+    public has(str: string): boolean
+    {
+        return this.seen.has(str)
+    }
 }
