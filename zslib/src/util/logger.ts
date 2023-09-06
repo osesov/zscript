@@ -493,6 +493,15 @@ class LogSystem {
 
         return result;
     }
+
+    getLevel(str: string | undefined): LogLevel | undefined
+    {
+        const k = Object.keys(LogLevel).find(key => LogLevel[<number><unknown>key] === str);
+        if (k === undefined)
+            return undefined
+
+        return Number(k) as LogLevel
+    }
 }
 
 export const logSystem = new LogSystem

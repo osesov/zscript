@@ -7,6 +7,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## [Unreleased]
 
 - Show definitions for multi-word strings
+- Show type hierarchy
 
 ## [1.0.5]
 

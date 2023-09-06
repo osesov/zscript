@@ -1,7 +1,7 @@
 import { Argument, ClassInfo, LocalVariable, ClassVariable, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, InterfaceMethod, InterfaceProperty, Position, TypeInfo, UnitInfo, ClassMethod, NamedType, EnumInfo, EnumValue, Type } from "./UnitInfo";
 
 // Get inheritance list given a class or interface (both extends and implements)
-export function getInheritance(includes: UnitInfo[], start: ClassInfo|InterfaceInfo): (ClassInfo|InterfaceInfo)[]
+export function getSupertypes(includes: UnitInfo[], start: ClassInfo|InterfaceInfo): (ClassInfo|InterfaceInfo)[]
 {
     const result: (ClassInfo|InterfaceInfo)[] = []
     const looking = new Set<string>
@@ -40,6 +40,77 @@ export function getInheritance(includes: UnitInfo[], start: ClassInfo|InterfaceI
         if (!somethingChanged)
             break;
     }
+    return result;
+}
+
+export function isSupertype(includes: UnitInfo[], start: ClassInfo|InterfaceInfo, maybeParent: ClassInfo|InterfaceInfo): boolean
+{
+    for(const it of start.extends) {
+        if (it === maybeParent.name)
+            return true;
+
+        const theClass = getClassByName(includes, it)
+        if (theClass && isSupertype(includes, theClass, maybeParent))
+            return true
+
+        const theInterface = getInterfaceByName(includes, it)
+        if (theInterface && isSupertype(includes, theInterface, maybeParent))
+            return true
+    }
+
+    if (start.context === ContextTag.CLASS) {
+        for (const it of start.implements) {
+            if (it === maybeParent.name)
+                return true;
+
+            const theInterface = getInterfaceByName(includes, it)
+            if (theInterface && isSupertype(includes, theInterface, maybeParent))
+                return true
+        }
+    }
+
+    return false;
+}
+
+export function getDirectSupertypes(includes: UnitInfo[], entity: ClassInfo | InterfaceInfo): (ClassInfo|InterfaceInfo)[]
+{
+    const result: (ClassInfo|InterfaceInfo)[] = []
+
+    for (const it of entity.extends) {
+        const theClass = getClassByName(includes, it);
+        if (theClass)
+            result.push(theClass);
+
+        const theInterface = getInterfaceByName(includes, it);
+        if (theInterface)
+            result.push(theInterface);
+    }
+
+    if (entity.context === ContextTag.CLASS) {
+        for (const it of entity.implements) {
+            const theInterface = getInterfaceByName(includes, it);
+            if (theInterface)
+                result.push(theInterface);
+        }
+    }
+
+    return result;
+}
+
+export function getDirectSubtypes(includes: UnitInfo[], entity: ClassInfo | InterfaceInfo): (ClassInfo|InterfaceInfo)[]
+{
+    const result: (ClassInfo|InterfaceInfo)[] = []
+
+    for (const unit of includes) {
+        for (const it of Object.values(unit.classes).filter(e => e.extends.includes(entity.name) || e.implements.includes(entity.name))) {
+            result.push(it);
+        }
+
+        for (const it of Object.values(unit.interfaces).filter(e => e.extends.includes(entity.name))) {
+            result.push(it);
+        }
+    }
+
     return result;
 }
 
@@ -341,7 +412,7 @@ export function * getScopeDefinitions(includes: UnitInfo[], position: Position, 
 
     function * visitClassInheritance(info: ClassInfo|InterfaceInfo): Generator<Definition>
     {
-        const inheritance = getInheritance(includes, info)
+        const inheritance = getSupertypes(includes, info)
 
         for (const it of inheritance) {
             switch(it.context) {

@@ -117,6 +117,7 @@ export class VSCodeSink implements LogSink
                 [LogLevel.ERROR, this.outputChannel.error],
                 [LogLevel.WARN, this.outputChannel.warn],
                 [LogLevel.INFO, this.outputChannel.info],
+                // [LogLevel.DEBUG, this.outputChannel.info],
                 [LogLevel.DEBUG, this.outputChannel.debug],
             ]
         )

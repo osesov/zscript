@@ -13,6 +13,7 @@ import { fromVscode } from '../../../zslib/src/util/vscodeUtil';
 import {default as subst} from 'vscode-variables'
 import { ZsHoverProvider } from './zsHoverProvider';
 import { ZsDocumentSymbolProvider, ZsWorkspaceSymbolProvider } from './zsSymbolProvider';
+import { ZsTypeHierarchyProvider } from './zsTypeHierarchyProvider';
 
 export namespace zsLanguageService
 {
@@ -42,9 +43,11 @@ export namespace zsLanguageService
 	// eslint-disable-next-line no-inner-declarations
 	function loadConfiguration(version: string, config: vscode.WorkspaceConfiguration, logger: Logger): ZsEnvironment
 	{
-		const includeDirs: string[] = getAsStringArray(config, 'includeDir').map(e=>subst(e))
+		const indexFiles: string[] = getAsStringArray(config, 'indexFiles').map(e => subst(e))
+		const includeDirs: string[] = getAsStringArray(config, 'includeDir').map(e => subst(e))
 		const stripPathPrefix: string[] = getAsStringArray(config, 'stripPathPrefix').map(appendDelimiter).map(e=>subst(e))
 		let cacheDir: string | undefined = config.get('cacheDir');
+		const logLevel = logSystem.getLevel(config.get('logLevel'))
 
 		if (cacheDir)
 			cacheDir = subst(cacheDir);
@@ -52,6 +55,7 @@ export namespace zsLanguageService
 		const settings: ZsEnvironment = {
 			version: version,
 			includeDirs: includeDirs,
+			indexFiles: indexFiles,
 			stripPathPrefix: stripPathPrefix,
 			cacheDir: cacheDir,
 		}
@@ -59,7 +63,11 @@ export namespace zsLanguageService
         for (const dir of vscode.workspace.workspaceFolders ?? []) {
 			includeDirs.push(dir.uri.fsPath)
         }
+
+		// if (logLevel !== undefined)
+		// 	logSystem.setLevel(logLevel);
 		logger.debug("Settings: {@settings}", settings);
+
 		return settings
 	}
 
@@ -86,6 +94,7 @@ export namespace zsLanguageService
 		context.subscriptions.push(vscode.languages.registerDefinitionProvider(selector, new ZsDefinitionProvider(repo)) )
 		context.subscriptions.push(vscode.languages.registerHoverProvider(selector, new ZsHoverProvider(repo)) )
 		context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(selector, new ZsDocumentSymbolProvider(repo)))
+		context.subscriptions.push(vscode.languages.registerTypeHierarchyProvider(selector, new ZsTypeHierarchyProvider(repo)))
 		context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(new ZsWorkspaceSymbolProvider(repo)))
 		context.subscriptions.push(new ZsDocumentMonitor(repo, context))
 		context.subscriptions.push(repo)

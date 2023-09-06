@@ -1,4 +1,4 @@
-import { ClassInfo, ContextTag, DefineInfo, GlobalFunction, GlobalVariable, InterfaceInfo, UnitInfo, UnitInfoData } from './UnitInfo'
+import { UnitInfo, UnitInfoData } from './UnitInfo'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
@@ -9,11 +9,13 @@ import * as parser from './zscript-parse'
 import { Logger, logSystem } from '../util/logger'
 import { assertUnreachable, getPromise } from '../util/util'
 import { Queue } from '../util/queue'
+import { globIterate } from 'glob'
 
 export interface ZsEnvironment
 {
     version: string
     includeDirs: string[]
+    indexFiles: string[]
     stripPathPrefix: string[]
     cacheDir?: string
 }
@@ -70,25 +72,36 @@ export class ZsRepository
         this.env = env
         this.fileAccessor = fileAccessor
         this.logger = logSystem.getLogger(ZsRepository);
+        this.indexAllFiles();
     }
 
     updateEnvironment(env: ZsEnvironment)
     {
         this.env = env
+        this.indexAllFiles();
     }
 
     public findInclude(fileName: string, baseDir: string | null): string | undefined
     {
-        if (fs.existsSync(fileName))
-            return path.resolve(fileName)
+        if (fs.existsSync(fileName)) {
+            if (fs.statSync(fileName).isFile())
+                return path.resolve(fileName)
+            return undefined
+        }
 
         // TODO: this must be applicable to non-system includes only
-        if (baseDir && fs.existsSync(path.resolve(baseDir, fileName)))
-            return path.resolve(baseDir, fileName)
+        if (baseDir) {
+            const p = path.resolve(baseDir, fileName);
+            if (fs.existsSync(p)) {
+                if (fs.statSync(p).isFile())
+                    return path.resolve(baseDir, fileName)
+                return undefined
+            }
+        }
 
         for(const dir of this.env.includeDirs) {
             const p = path.resolve(dir, fileName)
-            if (fs.existsSync(p)) {
+            if (fs.existsSync(p) && fs.statSync(p).isFile()) {
                 return p;
             }
         }
@@ -254,6 +267,7 @@ export class ZsRepository
                 // eslint-disable-next-line no-fallthrough
                 case 'failed':
                 case 'opening':
+                    this.logger.debug('Do loading {file}', it)
                     await this.loadFileSafe(it, unit)
                     break;
 
@@ -265,14 +279,19 @@ export class ZsRepository
             if (postpone.length > 0) {
                 if (updateTime === null)
                     throw Error("Postpone parsing and no update time");
+                this.logger.debug('Delay loading {@files}', postpone)
                 this.loadingQueue.requeue(postpone)
                 const now = Date.now()
                 const scheduleIn = (updateTime < now) ? 0 : updateTime - now
-                setTimeout(() => this.doLoading(), scheduleIn)
+                setTimeout(() => {
+                    this.logger.debug('Continue loading {@files}', postpone)
+                    this.doLoading()
+                }, scheduleIn)
             }
             else {
                 this.loading = false;
                 this.loadingQueue.reset()
+                this.logger.debug('Stop loading')
             }
         })
     }
@@ -281,6 +300,8 @@ export class ZsRepository
     {
         if (this.loading)
             return
+
+        this.logger.debug('Start loading')
 
         this.loading = true;
         this.doLoading();
@@ -356,7 +377,6 @@ export class ZsRepository
             const includeFile = queue.next()
             if (!includeFile)
                 continue
-
             const unit = await this.ensureFileLoaded(includeFile, false, false);
             if (unit) {
                 result.push(unit)
@@ -370,6 +390,7 @@ export class ZsRepository
         return result;
     }
 
+    // todo: need to load/index all the files
     public async getAllUnits(): Promise<UnitInfo[]>
     {
         const result : UnitInfo[] = []
@@ -416,6 +437,13 @@ export class ZsRepository
     public async rebuildIndex(doc: TextDocument): Promise<void>
     {
         await this.ensureFileLoaded(doc.fileName, true, true)
+    }
+
+    private async indexAllFiles(): Promise<void>
+    {
+        for await (const file of globIterate(this.env.indexFiles)) {
+            await this.ensureFileLoaded(file, false, false)
+        }
     }
 }
 

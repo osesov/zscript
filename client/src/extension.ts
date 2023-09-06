@@ -5,7 +5,7 @@ import { window as Window } from 'vscode';
 import { FileAccessor } from './Debugger/ZsDebugAdapter';
 import { zsDebugInit } from './Debugger/ZsDebugExtension';
 import { zsLanguageService } from './LanguageServer/zsLanguageService';
-import { logSystem } from '../../zslib/src/util/logger';
+import { LogLevel, logSystem } from '../../zslib/src/util/logger';
 import { VSCodeSink } from '../../zslib/src/util/vscodeUtil';
 
 function pathToUri(path: string) {
@@ -43,6 +43,7 @@ export function activate(context: vscode.ExtensionContext)
 	logSystem.addSink(new VSCodeSink(outputChannel))
 	// logSystem.addSink(new ConsoleSink())
 	// logSystem.setLevel(LogLevel.DEBUG)
+	// outputChannel.logLevel =
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.zscript.getProgramName', _config => {
 		return vscode.window.showInputBox({
