@@ -80,12 +80,13 @@ const pegjsPlugin = ({outFile, outDir}) => ({
                 // output: "source-and-map",
                 // output: "source-with-inline-map",
                 grammarSource: filename,
+                allowedStartRules: [ 'start', 'tokenize' ],
                 format: "commonjs",
                 plugins: [tspegjs],
                 tspegjs: {
                     customHeader: [
                         "import { UnitInfoBuilder } from './UnitInfoBuilder';",
-                        "import { ParserHelper, CurrentContext } from './ParserHelper';"
+                        "import { ParserHelper, CurrentContext, TokenTag, Token as TokenType } from './ParserHelper';"
                     ].join("\n")
                 }
             })

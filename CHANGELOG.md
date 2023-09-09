@@ -8,6 +8,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 - Show definitions for multi-word strings
 - Show type hierarchy
+- Semantic syntax coloring
 
 ## [1.0.5]
 

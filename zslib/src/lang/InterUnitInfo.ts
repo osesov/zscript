@@ -124,21 +124,41 @@ export function getDefinesByName(includes: UnitInfo[], name: string): DefineInfo
     return undefined
 }
 
-export function getClassByName(includes: UnitInfo[], className: string): ClassInfo | undefined
+export function getClassByName(includes: UnitInfo[], name: string): ClassInfo | undefined
 {
     for (const it of includes) {
-        if (className in it.classes)
-            return it.classes[className]
+        if (name in it.classes)
+            return it.classes[name]
     }
 
     return undefined
 }
 
-export function getInterfaceByName(includes: UnitInfo[], ifName: string): InterfaceInfo | undefined
+export function getInterfaceByName(includes: UnitInfo[], name: string): InterfaceInfo | undefined
 {
     for (const it of includes) {
-        if (ifName in it.interfaces)
-            return it.interfaces[ifName]
+        if (name in it.interfaces)
+            return it.interfaces[name]
+    }
+
+    return undefined
+}
+
+export function getEnumByName(includes: UnitInfo[], name: string): EnumInfo | undefined
+{
+    for (const it of includes) {
+        if (name in it.enums)
+            return it.enums[name]
+    }
+
+    return undefined
+}
+
+export function getTypeByName(includes: UnitInfo[], name: string): TypeInfo | undefined
+{
+    for (const it of includes) {
+        if (name in it.types)
+            return it.types[name]
     }
 
     return undefined
@@ -163,6 +183,17 @@ export function getGlobalVariableByName(includes: UnitInfo[], ifName: string): G
 
     return undefined
 }
+
+export function getDefineByName(includes: UnitInfo[], name: string): DefineInfo | undefined
+{
+    for (const it of includes) {
+        if (name in it.defines)
+            return it.defines[name]
+    }
+
+    return undefined
+}
+
 
 export type ScopeSymbolsTypes = Argument | LocalVariable
                                 | InterfaceInfo | InterfaceMethod | InterfaceProperty

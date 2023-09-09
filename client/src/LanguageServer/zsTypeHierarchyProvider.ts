@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { ZsRepository } from '../../../zslib/src/lang/zsRepository';
 import { Logger, logSystem } from '../../../zslib/src/util/logger';
 import { fromVscode, toVscode } from '../../../zslib/src/util/vscodeUtil';
-import { getClassByName, getSupertypes, getInterfaceByName, getScopeContext, getDirectSupertypes, getDirectSubtypes } from '../../../zslib/src/lang/InterUnitInfo';
+import { getClassByName, getInterfaceByName, getDirectSupertypes, getDirectSubtypes } from '../../../zslib/src/lang/InterUnitInfo';
 import { ClassInfo, ContextTag, InterfaceInfo, NamedType } from '../../../zslib/src/lang/UnitInfo';
 
 export class ZsTypeHierarchyProvider implements vscode.TypeHierarchyProvider

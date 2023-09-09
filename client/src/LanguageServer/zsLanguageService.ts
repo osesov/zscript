@@ -10,10 +10,11 @@ import { ZsDocumentMonitor } from './zsDocumentMonitor';
 import { Logger, logSystem } from '../../../zslib/src/util/logger';
 import { fromVscode } from '../../../zslib/src/util/vscodeUtil';
 
-import {default as subst} from 'vscode-variables'
 import { ZsHoverProvider } from './zsHoverProvider';
 import { ZsDocumentSymbolProvider, ZsWorkspaceSymbolProvider } from './zsSymbolProvider';
 import { ZsTypeHierarchyProvider } from './zsTypeHierarchyProvider';
+import variables from '../../../zslib/src/util/vscode-variables';
+import { ZsDocumentSemanticTokensProvider } from './ZsDocumentSemanticTokensProvider';
 
 export namespace zsLanguageService
 {
@@ -45,23 +46,23 @@ export namespace zsLanguageService
 	{
 		const value = config.get(name)
 		if (!value)
-			return subst(defValue)
+			return variables(defValue)
 
-		return subst(String(value))
+		return variables(String(value))
 	}
 
 	// eslint-disable-next-line no-inner-declarations
 	function loadConfiguration(version: string, config: vscode.WorkspaceConfiguration, logger: Logger): ZsEnvironment
 	{
-		const ignore = getAsStringArray(config, 'ignore').map(e => subst(e))
+		const ignore = getAsStringArray(config, 'ignore').map(e => variables(e))
 		const basePath: string = getAsString(config, 'basePath', "${workspaceFolder}")
-		const includeDirs: string[] = getAsStringArray(config, 'includeDir').map(e => subst(e))
-		const stripPathPrefix: string[] = getAsStringArray(config, 'stripPathPrefix').map(appendDelimiter).map(e=>subst(e))
+		const includeDirs: string[] = getAsStringArray(config, 'includeDir').map(e => variables(e))
+		const stripPathPrefix: string[] = getAsStringArray(config, 'stripPathPrefix').map(appendDelimiter).map(e=>variables(e))
 		let cacheDir: string | undefined = config.get('cacheDir');
 		const logLevel = logSystem.getLevel(config.get('logLevel'))
 
 		if (cacheDir)
-			cacheDir = subst(cacheDir);
+			cacheDir = variables(cacheDir);
 
 		const settings: ZsEnvironment = {
 			version: version,
@@ -97,17 +98,31 @@ export namespace zsLanguageService
 		const repo = createRepository(loadConfiguration(version, config, logger), fileAccessor)
 		vscode.workspace.onDidChangeConfiguration(() => repo.updateEnvironment(loadConfiguration(version, config, logger)))
 		// TODO:
-		// vscode.languages.registerReferenceProvider;
-		// vscode.languages.registerDeclarationProvider;
-		// vscode.languages.registerDocumentLinkProvider;
-		// vscode.languages.registerDocumentSymbolProvider; // https://code.visualstudio.com/docs/editor/editingevolved#_go-to-symbol
+		// vscode.languages.registerCodeLensProvider
+		// vscode.languages.registerCodeActionsProvider // https://code.visualstudio.com/docs/editor/editingevolved#_code-action
+		// vscode.languages.registerCallHierarchyProvider
+		// vscode.languages.registerInlineCompletionItemProvider
+		// vscode.languages.registerImplementationProvider
+		// vscode.languages.registerDeclarationProvider
+		// vscode.languages.registerEvaluatableExpressionProvider
+		// vscode.languages.registerInlineValuesProvider
+		// vscode.languages.registerDocumentHighlightProvider
+		// vscode.languages.registerReferenceProvider
+		// vscode.languages.registerRenameProvider
+		// vscode.languages.registerDocumentRangeSemanticTokensProvider
+		// vscode.languages.registerSignatureHelpProvider
+		// vscode.languages.registerColorProvider
 		// vscode.languages.registerInlayHintsProvider // https://code.visualstudio.com/docs/typescript/typescript-editing#_inlay-hints
+		// vscode.languages.registerDocumentLinkProvider
+
+		context.subscriptions.push(vscode.languages.registerDocumentSemanticTokensProvider(selector, new ZsDocumentSemanticTokensProvider(repo), ZsDocumentSemanticTokensProvider.getLegend()));
 		context.subscriptions.push(vscode.languages.registerCompletionItemProvider(selector, new ZsCompletionProvider(repo) ));
 		context.subscriptions.push(vscode.languages.registerDefinitionProvider(selector, new ZsDefinitionProvider(repo)) )
 		context.subscriptions.push(vscode.languages.registerHoverProvider(selector, new ZsHoverProvider(repo)) )
+		// https://code.visualstudio.com/docs/editor/editingevolved#_go-to-symbol
 		context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(selector, new ZsDocumentSymbolProvider(repo)))
-		context.subscriptions.push(vscode.languages.registerTypeHierarchyProvider(selector, new ZsTypeHierarchyProvider(repo)))
 		context.subscriptions.push(vscode.languages.registerWorkspaceSymbolProvider(new ZsWorkspaceSymbolProvider(repo)))
+		context.subscriptions.push(vscode.languages.registerTypeHierarchyProvider(selector, new ZsTypeHierarchyProvider(repo)))
 		context.subscriptions.push(new ZsDocumentMonitor(repo, context))
 		context.subscriptions.push(repo)
 

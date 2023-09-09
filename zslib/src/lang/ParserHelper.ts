@@ -43,6 +43,25 @@ export interface ParseRange
     end: number
 }
 
+export enum TokenTag
+{
+    PREPROCESSOR,
+    COMMENT,
+    IDENT,
+    OPERATOR,
+    STRING_LITERAL,
+    NUMBER_LITERAL,
+    SPACE,
+    UNDEFINED
+}
+
+export interface Token
+{
+    tag: TokenTag
+    location: parser.FileRange
+    text: string
+}
+
 export class ParseError extends Error
 {
     constructor(message: string, public location: FileRange)

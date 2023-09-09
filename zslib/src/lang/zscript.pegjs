@@ -2,41 +2,47 @@
 {
     const unitInfo = new UnitInfoBuilder(options.fileName, options.fullFileName)
     const helper = new ParserHelper(unitInfo)
+    let tokenizerAfterNewLine = true
+
+    function mkToken(tag: TokenTag, location: FileRange, text: text): TokenType
+    {
+        return { tag, location,text }
+    }
 }
 
 start
-    = ChunkStatement* { return unitInfo; }
+    = ChunkStatement* { return unitInfo as UnitInfoBuilder; }
 
 ChunkStatement
-    = (r:DocBlock {helper.setDocBlock(r)})* Chunk { helper.setDocBlock([])}
+    = (r:DocBlock {helper.setDocBlock(r)})* chunk:Chunk { helper.setDocBlock([]); return chunk}
 
 Chunk
-    = _ IfDirective
-    / _ IfdefDirective
-    / _ IfndefDirective
-    / _ ElifDirective
-    / _ ElseDirective
-    / _ EndifDirective
-    / _ DefineDirective
-    / _ IncludeDirective
+    = _ @IfDirective
+    / _ @IfdefDirective
+    / _ @IfndefDirective
+    / _ @ElifDirective
+    / _ @ElseDirective
+    / _ @EndifDirective
+    / _ @DefineDirective
+    / _ @IncludeDirective
 
     / _ "{" { helper.openCurly() }
     / _ "}" { const name = helper.closeCurly(unitInfo, location()); if (name) helper.trace(location(), 'END', name) }
 
-    / _ & {return helper.isTopLevel()}   ClassDeclaration
-    / _ & {return helper.isTopLevel()}   GlobalVariable
-    / _ & {return helper.isTopLevel()}   Function
-    / _ & {return helper.isClass()}      ClassMethod
-    / _ & {return helper.isClass()}      ClassVariableDeclaration
-    / _ & {return helper.isTopLevel()}   InterfaceDeclaration
-    / _ & {return helper.isInterface()}  InterfaceMethodDeclaration
-    / _ & {return helper.isInterface()}  PropertyDeclaration
-    / _ & {return helper.isTopLevel()}   TypeDeclaration
-    / _ & {return helper.isMethod()}     MethodExpression
-    / _ & {return helper.isFunction()}   FunctionExpression
+    / _ & {return helper.isTopLevel()}   @ClassDeclaration
+    / _ & {return helper.isTopLevel()}   @GlobalVariable
+    / _ & {return helper.isTopLevel()}   @GlobalFunction
+    / _ & {return helper.isClass()}      @ClassMethod
+    / _ & {return helper.isClass()}      @ClassVariableDeclaration
+    / _ & {return helper.isTopLevel()}   @InterfaceDeclaration
+    / _ & {return helper.isInterface()}  @InterfaceMethodDeclaration
+    / _ & {return helper.isInterface()}  @PropertyDeclaration
+    / _ & {return helper.isTopLevel()}   @TypeDeclaration
+    / _ & {return helper.isMethod()}     @MethodExpression
+    / _ & {return helper.isFunction()}   @FunctionExpression
 
-    / _ & {return helper.isTopLevel()}   EnumDeclaration
-    / _ & {return helper.isEnum()}       EnumValue
+    / _ & {return helper.isTopLevel()}   @EnumDeclaration
+    / _ & {return helper.isEnum()}       @EnumValue
 
     // TODO: this consumes sime unknown input to avoid errors
     // Comment and implement!
@@ -124,7 +130,7 @@ GlobalVariable
             unitInfo.addGlobalVariable(type, vars, location(), helper.docBlock, p)
         }
 
-Function
+GlobalFunction
     = type:Type _ name:IdentToken _ "(" args:MethodArgumentsDeclaration? _ ")" _ &( '{' )
         {
             helper.trace(location(), 'Global method', name)
@@ -284,7 +290,7 @@ Spaces
     = [ \t]+
 
 BlockCommentToken
-    = "/*" (!"*/" . )* "*/" { return ParserHelper.stripBlockComments(text())}
+    = "/*" (!"*/" . )* "*/" { return ParserHelper.stripBlockComments(text()) as string}
 
 LineCommentToken
     = "//" (! "\n" . )* "\n" { return text().substring(2).trim() }
@@ -293,10 +299,10 @@ IdentToken
     = _ !Keyword name:(@[_a-zA-Z] @[_a-zA-Z0-9]*) !IdentChar { return text().trim() }
 
 InterfaceToken
-    = _ "interface" !IdentChar
+    = _ @"interface" !IdentChar
 
 ClassToken
-    = _ "class" !IdentChar
+    = _ @"class" !IdentChar
 
 StringToken
     = _ @(["] ( [^\\"] / [\\]. )* ["] {return text()})
@@ -307,53 +313,124 @@ NumberToken
     / _ @([0-9]* [.] [0-9]+ ([eE] [-+] [0-9]+)? {return text()} )
 
 HashToken
-    = _ "#"
+    = _ @"#"
 
 IdentChar
     = [_a-zA-Z0-9]
 
 Keyword
-    = "_"           !IdentChar
-    / "namespace"   !IdentChar
-    / "event"       !IdentChar
-    / "ptr"         !IdentChar
-    / "shared"      !IdentChar
-    / "final"       !IdentChar
-    / "abstract"    !IdentChar
-    / "static"      !IdentChar
-    / "const"       !IdentChar
-    / "if"          !IdentChar
-    / "else"        !IdentChar
-    / "while"       !IdentChar
-    / "do"          !IdentChar
-    / "break"       !IdentChar
-	/ "continue"    !IdentChar
-    / "return"      !IdentChar
-    / "for"         !IdentChar
-    / "true"        !IdentChar
-    / "false"       !IdentChar
-    / "null"        !IdentChar
-	/ "enum"        !IdentChar
-    / "interface"   !IdentChar
-    / "class"       !IdentChar
-    / "struct"      !IdentChar
-    / "type"        !IdentChar
-    / "this"        !IdentChar
-    / "extends"     !IdentChar
-	/ "implements"  !IdentChar
-    / "switch"      !IdentChar
-    / "as"          !IdentChar
-    / "and"         !IdentChar
-    / "or"          !IdentChar
-    / "xor"         !IdentChar
-    / "not"         !IdentChar
-	/ "extern"      !IdentChar
-    / "mod"         !IdentChar
-    / "native"      !IdentChar
+    = @"_"           !IdentChar
+    / @"namespace"   !IdentChar
+    / @"event"       !IdentChar
+    / @"ptr"         !IdentChar
+    / @"shared"      !IdentChar
+    / @"final"       !IdentChar
+    / @"abstract"    !IdentChar
+    / @"static"      !IdentChar
+    / @"const"       !IdentChar
+    / @"if"          !IdentChar
+    / @"else"        !IdentChar
+    / @"while"       !IdentChar
+    / @"do"          !IdentChar
+    / @"break"       !IdentChar
+	/ @"continue"    !IdentChar
+    / @"return"      !IdentChar
+    / @"for"         !IdentChar
+    / @"true"        !IdentChar
+    / @"false"       !IdentChar
+    / @"null"        !IdentChar
+	/ @"enum"        !IdentChar
+    / @"interface"   !IdentChar
+    / @"class"       !IdentChar
+    / @"struct"      !IdentChar
+    / @"type"        !IdentChar
+    / @"this"        !IdentChar
+    / @"extends"     !IdentChar
+	/ @"implements"  !IdentChar
+    / @"switch"      !IdentChar
+    / @"as"          !IdentChar
+    / @"and"         !IdentChar
+    / @"or"          !IdentChar
+    / @"xor"         !IdentChar
+    / @"not"         !IdentChar
+	/ @"extern"      !IdentChar
+    / @"mod"         !IdentChar
+    / @"native"      !IdentChar
 
 Operator
     = "+=" / "-=" / "*=" / "/=" / "%=" / "^=" / "&=" / ">>=" / "<<=" / "&&=" / "||="
     / "--" / "++" / "<<" / ">>" / "||" / "&&"
     / "==" / "!=" / ">" / ">=" / "<" / "<="
-    / (("mod" / "shl" / "shr" / "or" / "and" / "xor" / "as" / "not") !IdentChar)
-    / [-_+~!*/%^=\[\]|&?:.]
+    / @"mod"    !IdentChar
+    / @"shl"    !IdentChar
+    / @"shr"    !IdentChar
+    / @"or"     !IdentChar
+    / @"and"    !IdentChar
+    / @"xor"    !IdentChar
+    / @"as"     !IdentChar
+    / @"not"    !IdentChar
+    / "-"
+    / "_"
+    / "+"
+    / "~"
+    / "!"
+    / "*"
+    / "/"
+    / "%"
+    / "^"
+    / "="
+    / "\\"
+    / "["
+    / "]"
+    / "|"
+    / "&"
+    / "?"
+    / ":"
+    / "."
+
+tokenize
+    = token+
+
+token
+    = &{ return tokenizerAfterNewLine } '#' [ \t]* [^\r\n]* '\r'? '\n' {
+        tokenizerAfterNewLine = true;
+        return mkToken(TokenTag.PREPROCESSOR, location(), text())
+    }
+    / BlockCommentToken {
+        return mkToken(TokenTag.COMMENT, location(), text())
+    }
+    / LineCommentToken {
+        tokenizerAfterNewLine = true;
+        return mkToken(TokenTag.COMMENT, location(), text())
+    }
+    / StringToken {
+        tokenizerAfterNewLine = false;
+        return mkToken(TokenTag.STRING_LITERAL, location(), text())
+    }
+    / NumberToken {
+        tokenizerAfterNewLine = false;
+        return mkToken(TokenTag.NUMBER_LITERAL, location(), text())
+    }
+    / Operator {
+        tokenizerAfterNewLine = false;
+        return mkToken(TokenTag.OPERATOR, location(), text())
+    }
+    / [_a-zA-Z][_a-zA-Z0-9]* {
+        tokenizerAfterNewLine = false;
+        return mkToken(TokenTag.IDENT, location(), text())
+    }
+    / [()\[\]{};] {
+        tokenizerAfterNewLine = false;
+        return mkToken(TokenTag.OPERATOR, location(), text())
+    }
+    / [ \t]+ {
+        return mkToken(TokenTag.SPACE, location(), '')
+    }
+    / [\r\n]+ {
+        tokenizerAfterNewLine = true;
+        return mkToken(TokenTag.SPACE, location(), '')
+    }
+    / . {
+        tokenizerAfterNewLine = false;
+        return mkToken(TokenTag.UNDEFINED, location(), text())
+    }

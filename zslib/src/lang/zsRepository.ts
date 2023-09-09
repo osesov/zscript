@@ -1,4 +1,4 @@
-import { UnitInfo, UnitInfoData } from './UnitInfo'
+import { Position, UnitInfo, UnitInfoData } from './UnitInfo'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
@@ -10,6 +10,8 @@ import * as parser from './zscript-parse'
 import { Logger, logSystem } from '../util/logger'
 import { assertUnreachable, getPromise, listFiles } from '../util/util'
 import { Queue } from '../util/queue'
+import { TokenTag, Token } from './ParserHelper'
+
 export interface ZsEnvironment
 {
     version: string
@@ -27,7 +29,6 @@ export interface CacheFile
     mtime?: number
     data: UnitInfoData
 }
-
 
 interface FileState
 {
@@ -55,6 +56,8 @@ export interface TextDocument
 {
     fileName: string
 }
+
+export {TokenTag, Token};
 
 export class ZsRepository
 {
@@ -230,11 +233,13 @@ export class ZsRepository
         }
 
         try {
+            const startTime = Date.now();
             const [fromCache, unitInfo] = await getUnitInfo(unit.state !== 'update')
+            const endTime = Date.now();
 
             unit.state = 'opened'
             unit.unitInfo = unitInfo
-            this.logger.info(`${fromCache ? 'loaded' : 'parsed'} {file}`, this.stripPathPrefix(fileName))
+            this.logger.info(`${fromCache ? 'loaded' : 'parsed'} {file} in {time} sec`, this.stripPathPrefix(fileName), ((endTime - startTime) / 1000).toFixed(2))
             unit.resolve(unitInfo)
 
             if (!fromCache)
@@ -504,6 +509,18 @@ export class ZsRepository
             return ready
         }).then(() => {})
     }
+
+    public tokenize(fileName: string, text: string): Token[]
+    {
+        const tokens: parser.Tokenize = parser.parse(text, {
+            grammarSource: fileName,
+            fileName: fileName,
+            startRule: "tokenize"
+        })
+
+        return tokens;
+    }
+
 }
 
 let repo: ZsRepository
