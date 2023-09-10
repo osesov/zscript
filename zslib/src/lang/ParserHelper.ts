@@ -48,6 +48,7 @@ export enum TokenTag
     PREPROCESSOR,
     COMMENT,
     IDENT,
+    KEYWORD,
     OPERATOR,
     STRING_LITERAL,
     NUMBER_LITERAL,

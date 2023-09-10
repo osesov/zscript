@@ -319,8 +319,7 @@ IdentChar
     = [_a-zA-Z0-9]
 
 Keyword
-    = @"_"           !IdentChar
-    / @"namespace"   !IdentChar
+    = @"namespace"   !IdentChar
     / @"event"       !IdentChar
     / @"ptr"         !IdentChar
     / @"shared"      !IdentChar
@@ -414,6 +413,10 @@ token
     / Operator {
         tokenizerAfterNewLine = false;
         return mkToken(TokenTag.OPERATOR, location(), text())
+    }
+    / Keyword {
+        tokenizerAfterNewLine = false;
+        return mkToken(TokenTag.KEYWORD, location(), text())
     }
     / [_a-zA-Z][_a-zA-Z0-9]* {
         tokenizerAfterNewLine = false;

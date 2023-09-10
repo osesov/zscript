@@ -1,3 +1,4 @@
+import { comparePosition } from "../util/util";
 import { ClassInfo, ClassMethod, LocalVariable, ClassVariable, GlobalFunction, InterfaceInfo, InterfaceMethod, InterfaceProperty, SpanType, UnitInfo, UnitInfoData, EnumInfo, EnumValue, TypeInfo, DefineInfo, GlobalVariable, Argument } from "./UnitInfo"
 
 export namespace json_converter
@@ -514,21 +515,7 @@ export namespace json_converter
             result.push(it)
         }
 
-        result.sort((lhs, rhs) => {
-            if (lhs.begin.line < rhs.begin.line)
-                return -1
-            if (lhs.begin.line === rhs.begin.line && lhs.begin.column < rhs.begin.column)
-                return -1
-
-            if (lhs.begin.line > rhs.begin.line)
-                return +1
-
-            if (lhs.begin.line === rhs.begin.line && lhs.begin.column > rhs.begin.column)
-                return +1
-
-            return 0;
-        })
-
+        result.sort((lhs, rhs) => comparePosition(lhs.begin, rhs.begin));
         return result;
     }
 }

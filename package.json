@@ -35,7 +35,11 @@
                     ".zs",
                     ".zi"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./language-configuration.json",
+                "icon": {
+                    "dark": "./images/zs-dark.svg",
+                    "light": "./images/zs-light.svg"
+                }
             }
         ],
         "grammars": [

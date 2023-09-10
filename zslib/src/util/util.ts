@@ -1,5 +1,6 @@
 import { globIterate } from 'glob'
 import { minimatch } from 'minimatch'
+import { Position } from '../lang/UnitInfo';
 
 export interface CancellationToken
 {
@@ -56,4 +57,32 @@ export async function * listFiles(patterns: string[]): AsyncGenerator<string>
 
         yield file
     }
+}
+
+
+export function comparePosition(lhs: Position, rhs: Position): number
+{
+    const line = lhs.line - rhs.line;
+    if (line < 0)
+        return -1
+    if (line == 0)
+        return lhs.column - rhs.column
+    return +1
+}
+
+export function inRange(position: Position, begin: Position, end: Position): boolean
+{
+    if (position.line < begin.line)
+        return false
+
+    if (position.line === begin.line && position.column < begin.column)
+        return false
+
+    if (position.line > end.line)
+        return false;
+
+    if (position.line === end.line && position.column > end.column)
+        return false
+
+    return true;
 }

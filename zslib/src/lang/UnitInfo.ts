@@ -1,4 +1,4 @@
-import { assertUnreachable } from "../util/util"
+import { assertUnreachable, comparePosition, inRange } from "../util/util"
 import { json_converter } from "./converter"
 
 export enum ContextTag
@@ -310,22 +310,6 @@ export class UnitInfo implements UnitInfoData
     {
         const result: SpanType[] = []
 
-        const inRange = (position: Position, begin: Position, end: Position): boolean => {
-            if (position.line < begin.line)
-                return false
-
-            if (position.line === begin.line && position.column < begin.column)
-                return false
-
-            if (position.line > end.line)
-                return false;
-
-            if (position.line === end.line && position.column > end.column)
-                return false
-
-            return true;
-        };
-
         for (const it of this.span) {
             if (!inRange(position, it.begin, it.end))
                 continue;
@@ -334,5 +318,72 @@ export class UnitInfo implements UnitInfoData
         }
 
         return result;
+    }
+
+    public contextIterator(): ContextIterator
+    {
+        return new ContextIterator(this.span)
+    }
+}
+
+export class ContextIterator
+{
+    private current: SpanType[] = []
+    private index: number
+    private currentPosition : Position | undefined
+
+    constructor(private span: SpanType[])
+    {
+        this.index = 0
+    }
+
+    private backward(position: Position)
+    {
+        while (this.index > 0) {
+            const t = this.span[this.index]
+            if (inRange(position, t.begin, t.end))
+                this.span.push(t)
+
+            if (comparePosition(position, t.begin) > 0)
+                break
+
+            this.index--;
+        }
+    }
+
+    private forward(position: Position)
+    {
+        while (this.index < this.span.length) {
+            const t = this.span[this.index]
+            if (inRange(position, t.begin, t.end))
+                this.current.push(t)
+
+            if (comparePosition(position, t.begin) < 0)
+                break
+
+            this.index++;
+        }
+    }
+
+    goTo(position: Position)
+    {
+        for (let index = this.context.length; index-- > 0; ){
+            const e = this.context[index]
+            if (!inRange(position, e.begin, e.end))
+                this.current.pop()
+        }
+
+        if (this.currentPosition && comparePosition(position, this.currentPosition) < 0) {
+            this.backward(position);
+        }
+        else {
+            this.forward(position)
+        }
+        this.currentPosition = position
+    }
+
+    get context(): SpanType[]
+    {
+        return this.current;
     }
 }

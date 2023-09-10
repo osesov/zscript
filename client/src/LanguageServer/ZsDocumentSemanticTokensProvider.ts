@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Token, TokenTag, ZsRepository } from '../../../zslib/src/lang/zsRepository';
-import { getClassByName, getDefineByName, getEnumByName, getGlobalFunctionByName, getGlobalVariableByName, getInterfaceByName, getScopeContext, getTypeByName } from '../../../zslib/src/lang/InterUnitInfo';
+import { getClassByName, getDefineByName, getEnumByName, getGlobalFunctionByName, getGlobalVariableByName, getInterfaceByName, getScopeContext, getSupertypes, getTypeByName } from '../../../zslib/src/lang/InterUnitInfo';
+import { ContextTag } from '../../../zslib/src/lang/UnitInfo';
 
 enum TokenType
 {
@@ -67,16 +68,61 @@ export class ZsDocumentSemanticTokensProvider implements vscode.DocumentSemantic
             return builder.build();
 
         const tokens = this.repo.tokenize(document.uri.fsPath, document.getText())
+        const contextIterator = main.contextIterator()
         //
-        // TODO: track context at the point, resolve
-        // - arguments
-        // - local variables
-        // - methods
+        // TODO: parse expressions, resolve dot access methods
         //
-        for(const token of tokens) {
+        next: for(const token of tokens) {
             if (cancellationToken.isCancellationRequested)
                 break;
+
             if (token.tag === TokenTag.IDENT) {
+
+                // check locals first
+                contextIterator.goTo(token.location.start)
+                const context = contextIterator.context
+
+                for (const item of context) {
+                    switch(item.context) {
+                    case ContextTag.CLASS_METHOD:
+                    case ContextTag.GLOBAL_FUNCTION:
+                        if (item.variables.find( e=> e.name === token.text)) {
+                            append(token, TokenType.variable, 0)
+                            continue next;
+                        }
+                        else if (item.args.find( e => e.name === token.text)) {
+                            append(token, TokenType.parameter, 0)
+                            continue next;
+                        }
+                        break;
+
+                    case ContextTag.INTERFACE:
+                    case ContextTag.CLASS:
+                        for (const it of getSupertypes(includes, item)) {
+                            if (it.context === ContextTag.INTERFACE && it.methods.find(e => e.name === token.text)) {
+                                append(token, TokenType.method, 0)
+                                continue next;
+                            }
+                            else if (it.context === ContextTag.INTERFACE && it.readProp.find( e=> e.name === token.text)) {
+                                append(token, TokenType.property, 0);
+                                continue next;
+                            }
+                            else if (it.context === ContextTag.INTERFACE && it.writeProp.find( e=> e.name === token.text)) {
+                                append(token, TokenType.property, 0);
+                                continue next;
+                            }
+                            else if (it.context === ContextTag.CLASS && it.methods.find(e => e.name === token.text)) {
+                                append(token, TokenType.method, 0)
+                                continue next;
+                            }
+                            else if (it.context === ContextTag.CLASS && it.variables.find( e=> e.name === token.text)) {
+                                append(token, TokenType.property, 0);
+                                continue next;
+                            }
+                        }
+                    }
+                }
+
                 if (getTypeByName(includes, token.text))
                     append(token, TokenType.type, 0);
 
