@@ -32,13 +32,18 @@ export namespace zsLanguageService
 	}
 
 	// eslint-disable-next-line no-inner-declarations
-	function getAsStringArray(config: vscode.WorkspaceConfiguration, name: string): string[]
+	function getAsStringArray(config: vscode.WorkspaceConfiguration, name: string, subst: boolean): string[]
 	{
 		const value = config.get(name)
 		if (!value || !Array.isArray(value))
 			return []
 
-		return value.map( e => String(e))
+		const result = value.map(e => String(e))
+
+		if (subst)
+			return result.map( e => variables(e))
+
+		return result
 	}
 
 	// eslint-disable-next-line no-inner-declarations
@@ -54,10 +59,10 @@ export namespace zsLanguageService
 	// eslint-disable-next-line no-inner-declarations
 	function loadConfiguration(version: string, config: vscode.WorkspaceConfiguration, logger: Logger): ZsEnvironment
 	{
-		const ignore = getAsStringArray(config, 'ignore').map(e => variables(e))
-		const basePath: string = getAsString(config, 'basePath', "${workspaceFolder}")
-		const includeDirs: string[] = getAsStringArray(config, 'includeDir').map(e => variables(e))
-		const stripPathPrefix: string[] = getAsStringArray(config, 'stripPathPrefix').map(appendDelimiter).map(e=>variables(e))
+		const ignore = getAsStringArray(config, 'ignore', true)
+		const basePath: string[] = getAsStringArray(config, 'basePath', true)
+		const includeDirs: string[] = getAsStringArray(config, 'includeDir', true)
+		const stripPathPrefix: string[] = getAsStringArray(config, 'stripPathPrefix', true).map(appendDelimiter)
 		let cacheDir: string | undefined = config.get('cacheDir');
 		const logLevel = logSystem.getLevel(config.get('logLevel'))
 

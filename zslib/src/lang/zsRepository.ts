@@ -1,4 +1,4 @@
-import { Position, UnitInfo, UnitInfoData } from './UnitInfo'
+import { UnitInfo, UnitInfoData } from './UnitInfo'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
@@ -16,7 +16,7 @@ export interface ZsEnvironment
 {
     version: string
     includeDirs: string[]
-    basePath: string
+    basePath: string[]
     ignore: string[]
     stripPathPrefix: string[]
     cacheDir?: string
@@ -58,6 +58,26 @@ export interface TextDocument
 }
 
 export {TokenTag, Token};
+
+export enum FileIncludeStatusTag
+{
+    success,
+    filtered, // skip die no filter
+    notFound, // file not found
+}
+
+export interface IncludeStatusNoFileName
+{
+    status: FileIncludeStatusTag.notFound
+}
+
+export interface IncludeStatusWithFileName
+{
+    status: FileIncludeStatusTag.success | FileIncludeStatusTag.filtered
+    fileName: string
+}
+
+export type FileIncludeStatus = IncludeStatusWithFileName | IncludeStatusNoFileName
 
 export class ZsRepository
 {
@@ -102,20 +122,25 @@ export class ZsRepository
         }
     }
 
-    public findInclude(fileName: string, baseDir: string | null, options: { direct: boolean }): string | undefined
+    public findIncludeFile(fileName: string, baseDir: string | null, options: { direct: boolean }): FileIncludeStatus
     {
-        const checkFile = (p: string): string | undefined => {
+        const checkFile = (p: string): FileIncludeStatus => {
             if (!fs.statSync(p).isFile())
-                return undefined
+                return { status: FileIncludeStatusTag.notFound }
 
-            if (!options.direct && fileName.startsWith(this.env.basePath)) {
-                const r = path.relative(this.env.basePath, p)
+            if (!options.direct) {
+                for (const basePath of this.env.basePath) {
+                    if (!p.startsWith(basePath))
+                        continue
 
-                if (this.ignore.ignores(r))
-                   return undefined
+                    const relPath = path.relative(basePath, p)
+
+                    if (this.ignore.ignores(relPath))
+                       return { status: FileIncludeStatusTag.filtered, fileName: p }
+                }
             }
 
-            return p
+            return { status: FileIncludeStatusTag.success, fileName: p }
         }
 
         if (fs.existsSync(fileName)) {
@@ -137,7 +162,7 @@ export class ZsRepository
             }
         }
 
-        return undefined
+        return { status: FileIncludeStatusTag.notFound }
     }
 
     public stripPathPrefix(path: string)
@@ -247,12 +272,23 @@ export class ZsRepository
 
             const baseName = path.dirname(fileName)
             for (const it of Object.keys(unitInfo.includes)) {
-                const n = this.findInclude(it, baseName, {direct: false});
-                if (!n) {
-                    this.logger.warn("Unable to find include {file}. Update 'zscript.includeDir'.", it)
-                    continue
+                const includeStatus = this.findIncludeFile(it, baseName, {direct: false});
+                switch(includeStatus.status) {
+                case FileIncludeStatusTag.success:
+                    this.ensureFileLoaded(includeStatus.fileName, false, false);
+                    break;
+
+                case FileIncludeStatusTag.filtered:
+                    this.logger.info("filter {file}", this.stripPathPrefix(includeStatus.fileName))
+                    break;
+
+                case FileIncludeStatusTag.notFound:
+                    this.logger.warn("Unable to find include '{file}'. Update 'zscript.includeDir'.", it)
+                    break
+
+                default:
+                    this.logger.warn(`Unhandled case: ${includeStatus}`)
                 }
-                this.ensureFileLoaded(n, false, false);
             }
         }
         catch(e: unknown) {
@@ -343,11 +379,22 @@ export class ZsRepository
     {
         const { promise, resolve } = getPromise<UnitInfo|undefined>()
 
-        const fullName = this.findInclude(fileName, null, {direct: true});
-        if (!fullName) {
+        const includeStatus = this.findIncludeFile(fileName, null, {direct: true});
+        if (includeStatus.status === FileIncludeStatusTag.notFound) {
             this.logger.warn("File not found: {file}", fileName)
             return Promise.resolve(undefined)
         }
+
+        if (includeStatus.status === FileIncludeStatusTag.filtered) {
+            return Promise.resolve(undefined)
+        }
+
+        if (includeStatus.status !== FileIncludeStatusTag.success) {
+            this.logger.warn(`Unknown includion status: ${includeStatus}`)
+            return Promise.resolve(undefined)
+        }
+
+        const fullName: string = includeStatus.fileName
 
         let info = this.unitInfo.get(fullName)
 
@@ -367,7 +414,10 @@ export class ZsRepository
         case 'update':
             if (force) {
                 info.updateTime = 0;
-                this.doLoading();
+                if (!this.loading)
+                    this.startLoading()
+                else
+                    this.doLoading();
             }
             return info.ready
 
@@ -399,9 +449,11 @@ export class ZsRepository
     {
         const queue = new Queue
         const result: UnitInfo[] = []
-        const fullName = this.findInclude(fileName, null, { direct: true})
-        if (!fullName)
+        const includeStatus = this.findIncludeFile(fileName, null, {direct: true})
+        if (includeStatus.status !== FileIncludeStatusTag.success)
             return result;
+
+        const fullName: string = includeStatus.fileName
 
         queue.add(fullName)
 
@@ -414,7 +466,15 @@ export class ZsRepository
                 result.push(unit)
 
                 const baseName = path.dirname(includeFile)
-                const newIncludes = Object.keys(unit.includes).map( e=> this.findInclude(e, baseName, {direct: false}))
+                const newIncludes: string[] = []
+
+                Object.keys(unit.includes).forEach( e => {
+                    const includeStatus = this.findIncludeFile(e, baseName, {direct: false})
+                    if (includeStatus.status !== FileIncludeStatusTag.success)
+                        return
+                    newIncludes.push(includeStatus.fileName)
+                })
+
                 queue.add(newIncludes)
             }
         }
@@ -487,7 +547,8 @@ export class ZsRepository
             let ready = Promise.resolve(false)
             let total = 0;
 
-            for await (const file of listFiles([this.env.basePath + '/**/*.{zs,zi}'])) {
+            const fileMasks = this.env.basePath.map( e => e + path.sep + '**' + path.sep + "*.{zs,zi}");
+            for await (const file of listFiles(fileMasks)) {
                 if (!fs.statSync(file).isFile()) {
                     continue
                 }

@@ -88,8 +88,12 @@
                 },
                 "zscript.basePath": {
                     "scope": "window",
-                    "type": "string",
-                    "default": "${workspaceFolder}",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "file"
+                    },
+                    "default": ["${workspaceFolder}"],
                     "description": "Base path to access project files. ${workspaceFolder} by default"
                 },
                 "zscript.ignore": {

@@ -1,7 +1,7 @@
 import { getScopeContext, getScopeDefinitions } from "../lang/InterUnitInfo";
 import { ContextTag, Position } from "../lang/UnitInfo";
 import { CancellationToken } from "../util/util";
-import { ZsRepository } from "../lang/zsRepository";
+import { FileIncludeStatusTag, ZsRepository } from "../lang/zsRepository";
 import * as path from 'path'
 
 export interface ZsDefinitionSink
@@ -47,10 +47,11 @@ export class ZsDefinitions
         const prefix = m[1]
         // const system = m[2] === "<";
         const includeName = m[3];
-        const resultFile = this.repo.findInclude(includeName, path.dirname(fileName));
-        if (!resultFile)
+        const includeStatus = this.repo.findIncludeFile(includeName, path.dirname(fileName), {direct: true});
+        if (includeStatus.status !== FileIncludeStatusTag.success)
             return false;
 
+        const resultFile: string = includeStatus.fileName;
         const start = {line: lineno, column: prefix.length}
         const end = {line: lineno, column: prefix.length + includeName.length}
 

@@ -6,12 +6,10 @@
         "/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start/scripts/framework/emscripten",
         "/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start/scripts/framework/optional",
         "/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start/scripts/framework/powerup"
-],
-
+    ],
     "zscript.stripPathPrefix": [
         "/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/MEDIAFIRST/start/scripts",
         "/home/osesov/zodiac/valhalla.tmnl/components/powerup/script/DOB2PE_SDK/include",
     ],
-
     "zscript.cacheDir": "${workspaceFolder}/.zs-cache"
 }
