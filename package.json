@@ -8,7 +8,7 @@
         "email": "oleg.sesov@orioninc.com"
     },
     "publisher": "osesov",
-    "version": "1.0.6-SNAPSHOT",
+    "version": "1.0.6",
     "engines": {
         "vscode": "^1.81.0"
     },
@@ -93,7 +93,9 @@
                         "type": "string",
                         "format": "file"
                     },
-                    "default": ["${workspaceFolder}"],
+                    "default": [
+                        "${workspaceFolder}"
+                    ],
                     "description": "Base path to access project files. ${workspaceFolder} by default"
                 },
                 "zscript.ignore": {
