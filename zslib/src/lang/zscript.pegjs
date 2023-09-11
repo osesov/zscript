@@ -60,7 +60,7 @@ DocBlock
     / WhiteSpace? doc:(LineCommentToken+) { return [...doc] }
 
 PostDoc
-    = WhiteSpace? '///<' WhiteSpace @([^\r\n]* { return text()}) '\r'? '\n'
+    = WhiteSpace? '///<' WhiteSpace @([^\r\n]* { return text()}) EndOfLine
 
 IfDirective
     = HashToken Spaces? "if" !IdentChar Spaces? PreprocessorLine
@@ -109,19 +109,27 @@ IncludeDirective
         }
 
 PreprocessorLine
-    = ([^\\\n\r] / [\\] Spaces? '\r'? '\n' / [\\] [^\r\n])* '\r'? "\n"
+    = ([^\\\n\r] / [\\] Spaces? EndOfLine / [\\] [^\r\n])* EndOfLine
 
-// TODO: This does not work if preprocessor unbalances brackets
+// TODO: This does not work if preprocessor disbalances brackets
 Expr
     = StringToken
     / NumberToken
     / BlockCommentToken
     / LineCommentToken
-    / [_a-zA-Z][_a-zA-Z0-9]*
-    / '(' _ (Expr / ',' / ';' / '=') * _ ')'
-    / '[' _ (Expr / ',' / ';' / '=') * _ ']'
-    / '{' _ (Expr / ',' / ';' / '=') * _ '}'
+    / Keyword
+    / Operator
+    / PlainIdentToken
+    / '(' _ (Expr / ',' / '=') * _ ')'
+    / '[' _ (Expr / ',' / '=') * _ ']'
+    / '{' _ (Expr / ',' / '=' / ';') * _ '}'
     / [^=;,()\[\]{}]
+
+EndOfInput
+    = !.
+
+EndOfLine
+    = '\r' ? ('\n' / EndOfInput )
 
 Variables
     = ( // &{return ParserHelper.beginOfStatement(input, range())}
@@ -302,7 +310,10 @@ LineCommentToken
     = "//" (! "\n" . )* "\n" { return text().substring(2).trim() }
 
 IdentToken
-    = _ !Keyword name:(@[_a-zA-Z] @[_a-zA-Z0-9]*) !IdentChar { return text().trim() }
+    = _ !Keyword @PlainIdentToken !IdentChar
+
+PlainIdentToken
+    = [_a-zA-Z][_a-zA-Z0-9]* { return text()}
 
 InterfaceToken
     = _ @"interface" !IdentChar
@@ -397,7 +408,7 @@ tokenize
     = token+
 
 token
-    = &{ return tokenizerAfterNewLine } '#' [ \t]* [^\r\n]* '\r'? '\n' {
+    = &{ return tokenizerAfterNewLine } '#' [ \t]* [^\r\n]* EndOfLine {
         tokenizerAfterNewLine = true;
         return mkToken(TokenTag.PREPROCESSOR, location(), text())
     }
@@ -424,7 +435,7 @@ token
         tokenizerAfterNewLine = false;
         return mkToken(TokenTag.KEYWORD, location(), text())
     }
-    / [_a-zA-Z][_a-zA-Z0-9]* {
+    / PlainIdentToken {
         tokenizerAfterNewLine = false;
         return mkToken(TokenTag.IDENT, location(), text())
     }

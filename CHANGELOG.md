@@ -6,6 +6,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+- Line could be terminated by '\n' or by the end if input
+
 ## [1.0.6]
 
 - Show definitions for multi-word strings
