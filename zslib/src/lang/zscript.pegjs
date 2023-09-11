@@ -111,11 +111,17 @@ IncludeDirective
 PreprocessorLine
     = ([^\\\n\r] / [\\] Spaces? '\r'? '\n' / [\\] [^\r\n])* '\r'? "\n"
 
+// TODO: This does not work if preprocessor unbalances brackets
 Expr
     = StringToken
+    / NumberToken
     / BlockCommentToken
     / LineCommentToken
-    / [^=;,]
+    / [_a-zA-Z][_a-zA-Z0-9]*
+    / '(' _ (Expr / ',' / ';' / '=') * _ ')'
+    / '[' _ (Expr / ',' / ';' / '=') * _ ']'
+    / '{' _ (Expr / ',' / ';' / '=') * _ '}'
+    / [^=;,()\[\]{}]
 
 Variables
     = ( // &{return ParserHelper.beginOfStatement(input, range())}
