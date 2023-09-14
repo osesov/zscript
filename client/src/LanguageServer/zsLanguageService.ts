@@ -134,14 +134,22 @@ export namespace zsLanguageService
 		context.subscriptions.push(
 			vscode.commands.registerTextEditorCommand('extension.zscript.rebuildIndex',
 			(textEditor: vscode.TextEditor) => {
-			vscode.window.setStatusBarMessage("Updating index...",
-				repo.rebuildIndex(textEditor.document)
-				.catch(e => vscode.window.showErrorMessage(e)))
+				if (textEditor.document.languageId !== languageId) {
+					vscode.window.showErrorMessage(`${textEditor.document.fileName}(${textEditor.document.languageId}) is not a zscript!`)
+					return
+				}
+				vscode.window.setStatusBarMessage("Updating index...",
+					repo.rebuildIndex(textEditor.document)
+					.catch(e => vscode.window.showErrorMessage(e)))
 		}));
 
 		context.subscriptions.push(
 			vscode.commands.registerTextEditorCommand('extension.zscript.openIndexFile',
 				async (textEditor: vscode.TextEditor) => {
+					if (textEditor.document.languageId !== languageId) {
+						vscode.window.showErrorMessage(`${textEditor.document.fileName}(${textEditor.document.languageId}) is not a zscript!`)
+						return
+					}
 					const indexFile = await repo.getCacheForDocument(textEditor.document);
 					if ("fileName" in indexFile) {
 						vscode.workspace.openTextDocument(indexFile.fileName)
